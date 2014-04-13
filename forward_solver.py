@@ -11,6 +11,8 @@ class CorePoly(object):
 	def order() : raise NotImplementedError
 	def copy(self): raise NotImplementedError
 	def __str__(self): raise NotImplementedError
+	def __eq__(self, other): raise NotImplementedError
+	def __ne__(self, other): raise NotImplementedError
 
 	# BOOLEANS 
 	def hasFractions(self): raise NotImplementedError 
@@ -18,13 +20,8 @@ class CorePoly(object):
 	def isZero(): return False
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
 
-
 	############################## TERMS AND FACTORS ##############################	
 	def isConstantTerm(self): return False
-	def hasCommonTerms(self): return False # override for SumPoly!!
-	def nonConstantTerms(self): return [] # override for SumPoly and BasicPoly
-	def constantTerms(self): return [] # override for SumPoly and BasicPoly, don't recurse on this
-	def shareFactors(self, other): raise NotImplementedError # override, return true if these polys share factors
 
 class SumPoly(CorePoly):
 	def __init__(self, poly_list): self.subpoly = poly_list
@@ -43,24 +40,28 @@ class SumPoly(CorePoly):
 	def copy(self): return SumPoly( [p.copy() for p in self.subpoly] )
 	def __str__(self): ' + '.join([str(p) for p in self.subpoly])
 
+	def __eq__(self, other): 
+		# same class types and same number of terms
+		if not (self.__class__ == other.__class__ and len(self.subpoly) == len(other.subpoly)):
+			return False
+		# every subpoly occurs in 'other' as well
+		return all([ p in other.subpoly for p in self.subpoly ])
+
+	def __ne__(self, other): return not (self == other)
+
 	# BOOLEANS 
 	def hasFractions(self): return any( [isinstance(p, RatPoly) for p in self.subpoly] )
 	def isLinearStdPoly(self): return self.order() == 1
 	def isFactored(self): self.order() < 2
 
-	# a sum list where each subpoly is multiplied by multiplier, how modify?
-	def distribute(multiplier): return SumPoly( [p.mult(multiplier) for p in self.subpoly] )
-
 	############################## terms and factors ##############################	
 	# TODO: implement all of these
+	def distribute(multiplier): return SumPoly( [p.mult(multiplier) for p in self.subpoly] )
 	def isConstantTerm(self): return self.order() == 0
 	def hasCommonTerms(self): return False # override for SumPoly!!
-	def nonConstantTerms(self): return [] # override for SumPoly and BasicPoly
-	def constantTerms(self): return [] # override for SumPoly and BasicPoly, don't recurse on this
-	def shareFactors(self, other): raise NotImplementedError # override, return true if these polys share factors
+	def getNonConstTerms(self): return [] # override for SumPoly and BasicPoly
+	def getConstantTerms(self): return [] # override for SumPoly and BasicPoly, don't recurse on this
 	def sumCommonTerms(self): raise NotImplementedError # add together common terms
-	def getCommonFactor(self): raise NotImplementedError # returns a factor in common among all the polynomials in the sum
-	def haveCommonFactor(self): raise NotImplementedError
 
 class ProdPoly(CorePoly):
 	def __init__(self, poly_list): self.subpoly = poly_list
@@ -75,6 +76,14 @@ class ProdPoly(CorePoly):
 	def order() : return sum([p.order() for p in self.subpoly])
 	def copy(self): return ProdPoly([p.copy() for p in self.subpoly])
 	def __str__(self): return ' * '.join(['('+str(p) +')' for p in self.subpoly])
+	def __eq__(self, other): 
+		# same class types and same number of terms
+		if not (self.__class__ == other.__class__ and len(self.subpoly) == len(other.subpoly)):
+			return False
+		# every subpoly occurs in 'other' as well
+		return all([ p in other.subpoly for p in self.subpoly ])
+
+	def __ne__(self, other): return not (self == other)
 
 	# BOOLEANS 
 	def hasFractions(self): any([ isinstance(p, RatPoly) for p in self.subpoly])
@@ -93,7 +102,6 @@ class ProdPoly(CorePoly):
 	def constantTerms(self): return [] # override for SumPoly and BasicPoly, don't recurse on this
 	def shareFactors(self, other): raise NotImplementedError # override, return true if these polys share factors
 
-
 class RatPoly(CorePoly):
 	def __init__(self, num, denom): self.num, self.denom = num, denom
 	############################## OPERATIONS ON POLYNOMIAL (NON-REDUCED VERSIONS)  ##############################	
@@ -106,6 +114,11 @@ class RatPoly(CorePoly):
 	def order() : return max([self.num.order(), self.denom.order()])
 	def copy(self) : return RatPoly(self.num.copy(), self.denom.copy())
 	def __str__(self): return '(' + str(self.num) + ')/(' + str(self.denom) + ')'
+	def __eq__(self, other): 
+		if not (self.__class__ == other.__class__) :
+			return False
+		return self.num == other.num and self.denom == other.denom
+	def __ne__(self, other): return not (self == other)
 
 	# BOOLEANS 
 	def hasFractions(self): return False 
@@ -142,6 +155,11 @@ class Monomial(CorePoly):
 			return str(self.coef) +'x'
 		else:
 			return str(self.coef) + 'x' + str(self.base)
+	def __eq__(self, other): 
+		if not (self.__class__ == other.__class__) :
+			return False
+		return self.coef == other.coef and self.base == other.base
+	def __ne__(self, other): return not (self == other)
 
 	# BOOLEANS 
 	def hasFractions(self): return False
