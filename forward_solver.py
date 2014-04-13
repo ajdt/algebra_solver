@@ -218,6 +218,7 @@ class Eqn:
 	def __str__(self):
 		return str(self.left) + '=' + str(self.right)
 	def copy(self): return Eqn(self.left.copy(), self.right.copy())
+
 class WorkingMem:
 	def __init__(self):
 		self.backtrack_stack = []
@@ -231,9 +232,71 @@ class WorkingMem:
 	def btpop(self) : return self.backtrack_stack.pop()
 	def btpush(self, eqn) : return self.backtrack_stack.append(eqn)
 
-# testing code		
-p = CorePoly()
-print "ok"
+class Solver:
+	def __init__(self, eqn): self.eqn, self.working_mem	 = eqn, WorkingMem()
 
+	############################## win conditions  ##############################	
+	def win1(self): return False
+	def win2(self): return False
+	def win3(self): return False
+
+	############################## rules ##############################	
+	# structure of recursive rules:
+
+	def simp1(self): return False
+	def simp2(self): return False
+	def simp3(self): return False
+	def simp4(self): return False
+	def simp5(self): return False
+	def simp6(self): return False
+
+	############################## checking and solving ##############################	
+	## list of rules and precedences they take
+	SIMP_RULES		= [simp1, simp2, simp3, simp4, simp5, simp6]
+	WIN_RULES		= [win1, win2, win3]
+	MULT_RULES		= []
+	MISC_RULES		= []
+	HEURISTICS		= []
+	
+	## solve the problem
+	def solve(self):
+		"""solve the equation given"""
+		while not self.checkWinCond():
+			#print str(self.eqn)
+			if self.checkRuleSet(self.SIMP_RULES):
+				continue
+			elif self.checkRuleSet(self.MULT_RULES):
+				continue
+			elif self.checkRuleSet(self.MISC_RULES):
+				continue
+			elif self.checkRuleSet(self.HEURISTICS):
+				continue
+			else:
+				# TODO: change this later
+				print "no rules apply"
+				return
+		#print str(self.eqn)
+
+	def checkWinCond(self):
+		""" check win conditions """
+		# if any win condition is active, then we've solved the equation
+		for rule in self.WIN_RULES:
+			if rule(self) :
+				return True
+		return False
+
+	def checkRuleSet(self, ruleset):
+		""" check an argument ruleset"""
+		for rule in ruleset:
+			if rule(self) :
+				return True
+		return False
+
+# testing code		
+left = SumPoly([Monomial(10, Bases.X), Monomial(3, Bases.CONST), Monomial(-3, Bases.CONST)])
+right = Monomial(10, Bases.CONST)
+
+solver = Solver(Eqn(left, right))
+solver.solve()
 # Notes:
 #	all/any for reducing a list of booleans
