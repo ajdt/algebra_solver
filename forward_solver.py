@@ -8,7 +8,7 @@ class CorePoly(object):
 	def negate(self): raise NotImplementedError
 
 	# UTILITY FUNCTIONS
-	def order() : raise NotImplementedError
+	def order(self) : raise NotImplementedError
 	def copy(self): raise NotImplementedError
 	def __str__(self): raise NotImplementedError
 	def __eq__(self, other): raise NotImplementedError
@@ -17,7 +17,7 @@ class CorePoly(object):
 	# BOOLEANS 
 	def hasFractions(self): raise NotImplementedError 
 	def isFactored(self): return False 
-	def isZero(): return False
+	def isZero(self): return False
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
 	def isConstTerm(self): return self.order() == 0 # NOTE: this works for all  poly types
 	def shareFactors(self, other): return False
@@ -53,10 +53,18 @@ class SumPoly(CorePoly):
 
 	# BOOLEANS 
 	def hasFractions(self): return any( [isinstance(p, RatPoly) for p in self.subpoly] )
-	def isLinearStdPoly(self): return self.order() == 1
+	def isLinearStdPoly(self): return all([isinstance(p, Monomial) for p in self.subpoly]) and self.order() < 2
 	def isFactored(self): self.order() < 2
 	def isSameTerm(self, other): return self == other
 	def shareFactors(self, other): return self == other
+
+	# MISC HELPERS
+	def coeffOf(self, base): 
+		# only returns the first subpoly of that base
+		for p in self.subpoly:
+			if p.base == base:
+				return p.coef
+		return None
 
 	############################## terms and factors ##############################	
 	# TODO: implement all of these
@@ -100,7 +108,7 @@ class ProdPoly(CorePoly):
 	def negate(self): return ProdPoly( [self.subpoly[0].negate()] + self.subpoly[1:] )
 
 	# UTILITY FUNCTIONS
-	def order() : return sum([p.order() for p in self.subpoly])
+	def order(self) : return sum([p.order() for p in self.subpoly])
 	def copy(self): return ProdPoly([p.copy() for p in self.subpoly])
 	def __str__(self): return ' * '.join(['('+str(p) +')' for p in self.subpoly])
 	def __eq__(self, other): 
@@ -115,7 +123,6 @@ class ProdPoly(CorePoly):
 	# BOOLEANS 
 	def hasFractions(self): any([ isinstance(p, RatPoly) for p in self.subpoly])
 	def isFactored(self): return max([p.order() for p in self.subpoly]) <= 1
-	def isZero(): return False
 	def isLinearStdPoly(self): return self.order < 2  
 	def isSameTerm(self, other): return self == other
 
@@ -141,7 +148,7 @@ class RatPoly(CorePoly):
 	def negate(self): return RatPoly(self.num.negate(), self.denom)
 
 	# UTILITY FUNCTIONS
-	def order() : return max([self.num.order(), self.denom.order()])
+	def order(self) : return max([self.num.order(), self.denom.order()])
 	def copy(self) : return RatPoly(self.num.copy(), self.denom.copy())
 	def __str__(self): return '(' + str(self.num) + ')/(' + str(self.denom) + ')'
 	def __eq__(self, other): 
@@ -152,8 +159,8 @@ class RatPoly(CorePoly):
 
 	# BOOLEANS 
 	def hasFractions(self): return False 
-	def isFactored(self): return False 
-	def isZero(): return False
+	def isFactored(self): return max([self.num.order(), self.denom.order()]) < 2
+	def isZero(self): return self.num.isZero()
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
 	def isSameTerm(self, other): return self.denom() == other.denom()
 
@@ -180,7 +187,7 @@ class Monomial(CorePoly):
 	def negate(self): return Monomial(self.coef*-1, self.base)
 
 	# UTILITY FUNCTIONS
-	def order() : return self.base
+	def order(self) : return self.base
 	def copy(self): return Monomial(self.coef, self.base)
 	def __str__(self): 
 		if self.coef == 0:
@@ -199,11 +206,12 @@ class Monomial(CorePoly):
 
 	# BOOLEANS 
 	def hasFractions(self): return False
-	def isFactored(self): return True 
-	def isZero(): return self.coef == 0
+	def isFactored(self): return self.order() < 2 
+	def isZero(self): return self.coef == 0
 	def isLinearStdPoly(self): return True  
-	def isConstantTerm(self): return self.base == Bases.CONST
+	def isConstTerm(self): return self.base == Bases.CONST
 	def isSameTerm(self, other): return self.base == other.base
+	def coeffOf(self, base): return self.coef if base == self.base else None
 
 	############################## TERMS AND FACTORS ##############################	
 	def sumSameTerm(self, other):
@@ -218,6 +226,7 @@ class Eqn:
 	def __str__(self):
 		return str(self.left) + '=' + str(self.right)
 	def copy(self): return Eqn(self.left.copy(), self.right.copy())
+	def order(self): return max([self.left.order(), self.right.order()])
 
 class WorkingMem:
 	def __init__(self):
@@ -236,12 +245,40 @@ class Solver:
 	def __init__(self, eqn): self.eqn, self.working_mem	 = eqn, WorkingMem()
 
 	############################## win conditions  ##############################	
-	def win1(self): return False
-	def win2(self): return False
-	def win3(self): return False
+	def win1(self): # """ case a = b"""
+		right, left = self.eqn.right, self.eqn.left
+		return (left.isConstTerm() and right.isConstTerm() and left != right)
+	def win2(self): 
+		""" case ax = b"""
+		# TODO: break this up into another rule
+		right, left = self.eqn.right, self.eqn.left
+		return all([left.isLinearStdPoly(),right.isConstTerm(),left.coeffOf(Bases.X) != 1])
+	def win3(self): 
+		right, left = self.eqn.right, self.eqn.left
+		return ( self.eqn.order() >= 2 and left.isFactored() and right.isZero() )
 
 	############################## rules ##############################	
 	# structure of recursive rules:
+	def polyRule(self, poly, condition, action):
+		# will return new polynomial and T/F depending on whether action was performed
+		if condition(poly):
+			return (action(poly), True)
+		else:
+			if isinstance(poly, BasicPoly):
+				return (poly, False)
+			elif isinstance(poly, RatPoly):
+				new_num, changed = func(poly.num)
+				if changed:
+					return (RatPoly(new_num, poly.denom), changed)
+				else:
+					new_denom, changed = fun(poly.denom)
+					return (RatPoly(poly.num, new_denom), changed)
+			else : # SumPoly or ProdPoly
+				ls = [self.polyRule(p, condition, action) for p in poly.subpoly]
+				terms = map(lambda x: x[0], ls)
+				bools = map(lambda x: x[1], ls)
+				result = SumPoly(terms) if isinstance(poly, SumPoly) else ProdPoly(terms)
+				return (result, any(bools))
 
 	def simp1(self): return False
 	def simp2(self): return False
