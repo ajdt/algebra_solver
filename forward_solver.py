@@ -19,6 +19,8 @@ class CorePoly(object):
 	def isFactored(self): return False 
 	def isZero(): return False
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
+	def isConstTerm(self): return self.order() == 0 # NOTE: this works for all  poly types
+	def shareFactors(self, other): return False
 
 	############################## TERMS AND FACTORS ##############################	
 	def isConstantTerm(self): return False
@@ -53,15 +55,40 @@ class SumPoly(CorePoly):
 	def hasFractions(self): return any( [isinstance(p, RatPoly) for p in self.subpoly] )
 	def isLinearStdPoly(self): return self.order() == 1
 	def isFactored(self): self.order() < 2
+	def isSameTerm(self, other): return self == other
+	def shareFactors(self, other): return self == other
 
 	############################## terms and factors ##############################	
 	# TODO: implement all of these
-	def distribute(multiplier): return SumPoly( [p.mult(multiplier) for p in self.subpoly] )
+	def sumSameTerm(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
+		return sumCommonTerms(SumPoly(self.subpoly + other.subpoly))
 	def isConstantTerm(self): return self.order() == 0
-	def hasCommonTerms(self): return False # override for SumPoly!!
-	def getNonConstTerms(self): return [] # override for SumPoly and BasicPoly
-	def getConstantTerms(self): return [] # override for SumPoly and BasicPoly, don't recurse on this
-	def sumCommonTerms(self): raise NotImplementedError # add together common terms
+	def getNonConstTerms(self): return [ p for p in self.subpoly if not p.isConstTerm() ] 
+	def getConstantTerms(self): return [ p for p in self.subpoly if p.isConstTerm() ] 
+	def distribute(multiplier): return SumPoly( [p.mult(multiplier) for p in self.subpoly] )
+	def hasCommonTerms(self): 
+		for idx, poly in enumerate(self.subpoly):
+			for jidx, other in enumerate(self.subpoly):
+				if idx == jidx:
+					continue
+				if poly.isSameTerm(other):
+					return True
+		return False
+
+	def sumCommonTerms(self): 
+		ls = self.subpoly
+		condensed = [] # common terms after being added together
+		while len(ls) > 0:
+			# in each pass, grab all subpoly that have sameTerms and add them
+			result = reduce(lambda x,y: x.sumSameTerm(y), filter(lambda x: ls[0].isSameTerm(x), ls) )
+			condensed.append(result)
+			ls = filter(lambda x: not ls[0].isSameTerm(x), ls)
+
+		# return new poly 
+		if len(condensed) > 1:
+			return SumPoly(condensed)
+		else:
+			return condensed[0]
 
 class ProdPoly(CorePoly):
 	def __init__(self, poly_list): self.subpoly = poly_list
@@ -90,16 +117,19 @@ class ProdPoly(CorePoly):
 	def isFactored(self): return max([p.order() for p in self.subpoly]) <= 1
 	def isZero(): return False
 	def isLinearStdPoly(self): return self.order < 2  
+	def isSameTerm(self, other): return self == other
 
 
 	############################## TERMS AND FACTORS ##############################	
+	def sumSameTerm(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
+		if not self.isSameTerm(other):
+			return self.add(other)
+		else:
+			return ProdPoly(self.subpoly + [Monomial(coef=2, base=Bases.CONST)])
 	def foil(self): raise NotImplementedError #return result of multiplying terms together # foil specific terms?
 	def commonFactors(self): raise NotImplementedError
 	def commonFactors(self, other): raise NotImplementedError
 	def isConstantTerm(self): return False
-	def hasCommonTerms(self): return False # override for SumPoly!!
-	def nonConstantTerms(self): return [] # override for SumPoly and BasicPoly
-	def constantTerms(self): return [] # override for SumPoly and BasicPoly, don't recurse on this
 	def shareFactors(self, other): raise NotImplementedError # override, return true if these polys share factors
 
 class RatPoly(CorePoly):
@@ -125,9 +155,15 @@ class RatPoly(CorePoly):
 	def isFactored(self): return False 
 	def isZero(): return False
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
+	def isSameTerm(self, other): return self.denom() == other.denom()
 
 
 	############################## MISC OPERATIONS ##############################	
+	def sumSameTerm(self, other):
+		if not self.isSameTerm(other):
+			return self.add(other)
+		else:
+			return RatPoly(self.num.add(other.num), self.denom.copy())
 	def shareFactors(self, other): raise NotImplementedError # override, return true if these polys share factors
 	def cancelNumDenom(self) : raise NotImplementedError# if num and denom have common terms cancel them, #TODO: maybe keep as a function?
 	def multReduce(self, other): raise NotImplementedError# if other occurs in denom, then cancel otherwise just multiply
@@ -167,12 +203,34 @@ class Monomial(CorePoly):
 	def isZero(): return self.coef == 0
 	def isLinearStdPoly(self): return True  
 	def isConstantTerm(self): return self.base == Bases.CONST
-
+	def isSameTerm(self, other): return self.base == other.base
 
 	############################## TERMS AND FACTORS ##############################	
-	def nonConstantTerms(self): return ([self] if self.base != Bases.CONST  else [] )
-	def constantTerms(self): return ([self] if self.base == Bases.CONST  else  [] )
-	def shareFactors(self, other): raise NotImplementedError # override, return true if these polys share factors
+	def sumSameTerm(self, other):
+		if not self.isSameTerm(other):
+			return self.add(other)
+		else:
+			return Monomial(self.coef + other.coef, self.base)
+	def shareFactors(self, other): raise NotImplementedError
+class Eqn:
+	def __init__(self, left, right):
+		self.left, self.right = left, right
+	def __str__(self):
+		return str(self.left) + '=' + str(self.right)
+	def copy(self): return Eqn(self.left.copy(), self.right.copy())
+class WorkingMem:
+	def __init__(self):
+		self.backtrack_stack = []
+		self.steps = []
+		self.goals = []
+	def hasGoal(self, goal): return goal in self.goals
+	def addGoal(self, goal): self.goals.append(goal)
+	def removeGoal(self, goal): self.goals.remove(goal)
+	def addStep(self, step) : self.steps.append(step)
+	def btpeek(self): return self.backtrack_stack[-1]
+	def btpop(self) : return self.backtrack_stack.pop()
+	def btpush(self, eqn) : return self.backtrack_stack.append(eqn)
+
 # testing code		
 p = CorePoly()
 print "ok"
