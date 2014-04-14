@@ -63,6 +63,7 @@ class SumPoly(CorePoly):
 	def shareFactors(self, other): return self == other
 
 	# MISC HELPERS
+	def getFractions(self): return [ p for p in self.subpoly if isinstance(p, RatPoly) ]
 	def coeffOf(self, base): 
 		# only returns the first subpoly of that base
 		for p in self.subpoly:
@@ -138,13 +139,18 @@ class ProdPoly(CorePoly):
 		return False
 
 
+	# MISC HELPERS
+	def getFractions(self): return [ p for p in self.subpoly if isinstance(p, RatPoly) ]
+	def getNonConstTerms(self): return [p for p in self.subpoly if not p.isConstTerm()]
+	def getConstTerms(self): return [p for p in self.subpoly if p.isConstTerm()]
 	############################## TERMS AND FACTORS ##############################	
 	def sumSameTerm(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
 		if not self.isSameTerm(other):
 			return self.add(other)
 		else:
 			return ProdPoly(self.subpoly + [Monomial(coef=2, base=Bases.CONST)])
-	def foil(self): raise NotImplementedError #return result of multiplying terms together # foil specific terms?
+	def foil(self): raise NotImplementedError
+		# does two actions, foil and simplify foiled terms
 	def commonFactors(self): raise NotImplementedError
 	def commonFactors(self, other): raise NotImplementedError
 	def isConstantTerm(self): return False
@@ -177,13 +183,17 @@ class RatPoly(CorePoly):
 	def __ne__(self, other): return not (self == other)
 
 	# BOOLEANS 
-	def hasFractions(self): return False 
+	def hasFractions(self): return True # true if you have or are a fraction 
 	def isFactored(self): return max([self.num.order(), self.denom.order()]) < 2
 	def isZero(self): return self.num.isZero()
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
 	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.denom == other.denom
 
 
+	# MISC HELPERS
+	def getFractions(self): return [self]
+	def getNonConstTerms(self): return [self]
+	def getConstTerms(self): return [] # TODO: change this, in case of const fraction?
 	############################## MISC OPERATIONS ##############################	
 	def sumSameTerm(self, other):
 		if not self.isSameTerm(other):
@@ -267,6 +277,10 @@ class Monomial(CorePoly):
 	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.base == other.base
 	def coeffOf(self, base): return self.coef if base == self.base else None
 
+	# MISC HELPERS
+	def getFractions(self): return []
+	def getNonConstTerms(self): return [self] if self.order() > 0  else []
+	def getConstTerms(self): return [self] if self.order() == 0  else []
 	############################## TERMS AND FACTORS ##############################	
 	def sumSameTerm(self, other):
 		if not self.isSameTerm(other):
@@ -370,10 +384,16 @@ class Solver:
 		left, right = self.eqn.left, self.eqn.right
 		# TODO: may have to fix when this rule fires, what if we have x+3 = 2, can't proceed
 		if not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not right.isConstTerm():
-			nonconst_terms, const_terms = right.getNonConstTerms(), left.getConstTerms()
+			to_remove = right.getNonConstTerms() + left.getConstTerms()
+			if len(to_remove) == 0:
+				return False
+			if len(to_remove) == 1:
+				remove_poly = to_remove[0]
+			else :
+				remove_poly = SumPoly(to_remove)
 			# subtract the terms from both sides
-			self.eqn.left = self.eqn.left.sub(SumPoly(nonconst_terms + const_terms))
-			self.eqn.right = self.eqn.right.sub(SumPoly(nonconst_terms + const_terms))
+			self.eqn.left = self.eqn.left.sub(remove_poly)
+			self.eqn.right = self.eqn.right.sub(remove_poly)
 			return True
 		return False
 
@@ -393,12 +413,79 @@ class Solver:
 			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
 		return changed
 
+	def mult1(self):
+		cond	= lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly)
+		action	= lambda p: ProdPoly([p.num, p.denom.reciprocal()])
+		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
+		if not changed:
+			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
+		return changed
+
+	def mult2(self):
+		if self.eqn.left.hasFractions() and  self.eqn.right.hasFractions():
+			# get list of denom from both sides
+			left_denom = [i.denom for i in self.eqn.left.getFractions()]
+			right_denom = [i.denom for i in self.eqn.right.getFractions()]
+			# compute lcm and multiply
+			lcm = Solver.computeLCM(left_denom + right_denom)
+			self.eqn.right = self.eqn.right.mult(lcm)
+			self.eqn.left = self.eqn.left.mult(lcm)
+			return True
+		return False
+
+	@staticmethod
+	def mult4Helper(sum_poly):
+		lcm = Solver.computeLCM( [ i.denom for i in sum_poly.getFractions() ])
+		rp = RatPoly(lcm, lcm.copy())
+		ls = []
+		for i in range(len(p.subpoly)):
+			if isinstance(p.subpoly[i], RatPoly):
+				ls.append(p.subpoly[i].mult(rp))
+			else:
+				ls.append(p.subpoly[i])
+		return SumPoly(ls)
+
+	def mult4(self):
+		cond = lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(p.getFractions()) > 1
+		action = Solver.mult4Helper
+		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
+		if not changed:
+			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
+		return changed
+	#def mult5(self):
+	#	cond = lambda p: isinstance(p, ProdPoly)
+	#	action = ProdPoly.foil()
+
+	@staticmethod
+	def computeLCM( poly_list):
+		""" compute the lcm of a list of fractions"""
+		# TODO: overly complex, simplify
+		terms = []
+		for p in poly_list:
+			if isinstance(p, ProdPoly):
+				for subpoly in p.subpoly:
+					num_p = len([x for x in p.subpoly if x == subpoly])
+					num_terms = len([x for x in terms if x == subpoly])
+					# if subpoly occurs in p more times than already
+					# accounted for, then include it until we have
+					# enough multiples
+					if num_p > num_terms:
+						for i in range(num_p - num_terms):
+							terms.append(subpoly)
+
+			elif p not in terms:
+				terms.append(p)
+		if len(terms) == 1:
+			return terms[0]
+		else :
+			return ProdPoly(terms)
+
 
 	############################## checking and solving ##############################	
 	## list of rules and precedences they take
 	SIMP_RULES		= [simp0, simp1, simp2, simp3, simp4, simp5]
 	WIN_RULES		= [win1, win2, win3]
-	MULT_RULES		= []
+	MULT_RULES		= [mult1, mult2]
 	MISC_RULES		= []
 	HEURISTICS		= []
 	
@@ -418,7 +505,8 @@ class Solver:
 			else:
 				# TODO: change this later
 				print "no rules apply"
-				return
+				print str(self.eqn)
+				return str(self.eqn)
 		print str(self.eqn)
 		return str(self.eqn)
 
@@ -439,6 +527,7 @@ class Solver:
 				return True
 		return False
 
+# TODO: remove later
 # testing code		
 def testSolve1():
 	left = SumPoly([Monomial(10, Bases.X), Monomial(3, Bases.CONST), Monomial(-3, Bases.CONST)])
@@ -458,7 +547,6 @@ def testSolve3():
 
 	solver = Solver(Eqn(left, right))
 	solver.solve()
-	print "\n"
 def testSolve4():
 	sp1 = SumPoly([Monomial(1, Bases.X), Monomial(1, Bases.CONST)])
 	sp2 = SumPoly([Monomial(1, Bases.X), Monomial(3, Bases.CONST)])
@@ -474,11 +562,21 @@ def testSolve4():
 	solver.solve()
 	print "\n"
 
+def testSolve5():
+	sp1 = SumPoly([Monomial(1, Bases.X), Monomial(1, Bases.CONST)])
+	sp2 = SumPoly([Monomial(1, Bases.X), Monomial(3, Bases.CONST)])
+
+	left = RatPoly(Monomial(1, Bases.CONST), sp1)
+	right = RatPoly(Monomial(1, Bases.CONST), sp2)
+	solver = Solver(Eqn(left, right))
+	pdb.set_trace()
+	solver.solve()
 def main():
 	testSolve1()
 	testSolve2()
 	testSolve3()
 	testSolve4()
-main()
+	testSolve5()
+#main()
 # Notes:
 #	all/any for reducing a list of booleans

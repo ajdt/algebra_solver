@@ -31,7 +31,7 @@ class PolyTest(unittest.TestCase):
 		# now add the common terms, and test for equality
 		result = SumPoly([self.const, Monomial(self.x_term.coef + self.x_term2.coef, self.x_term.base)])
 		self.assertTrue(sum_poly.sumCommonTerms() == result)
-class RuleTest(unittest.TestCase):
+class SolverTest(unittest.TestCase):
 	def setUp(self):
 		# monomials
 		self.x_term = Monomial(coef=1,base=Bases.X)
@@ -67,7 +67,7 @@ class RuleTest(unittest.TestCase):
 		print 'is factored ' + str(solver.eqn.left.isFactored()) + str(solver.eqn.left.order())
 		self.assertFalse(solver.win3())
 	#def
-class SolverTest(unittest.TestCase):
+class SampleCasesTest(unittest.TestCase):
 	def test_solve1(self):
 		left = SumPoly([Monomial(10, Bases.X), Monomial(3, Bases.CONST), Monomial(-3, Bases.CONST)])
 		right = Monomial(10, Bases.CONST)
@@ -97,5 +97,34 @@ class SolverTest(unittest.TestCase):
 		right = SumPoly([Monomial(3, Bases.CONST), Monomial(1, Bases.X2)])
 
 		solver = Solver(Eqn(left, right))
-		#pdb.set_trace()
 		self.assertEqual(solver.solve(), '3x + -3=0')
+
+class SolverRuleTest(unittest.TestCase):
+	def test_simp0(self):
+	def test_mult2(self):
+		sp1 = SumPoly([Monomial(1, Bases.X), Monomial(1, Bases.CONST)])
+		sp2 = SumPoly([Monomial(1, Bases.X), Monomial(3, Bases.CONST)])
+
+		left = RatPoly(Monomial(1, Bases.CONST), sp1)
+		right = RatPoly(Monomial(1, Bases.CONST), sp2)
+		solver = Solver(Eqn(left, right))
+		solver.mult2()
+		# result should be...
+		left = ProdPoly([left, ProdPoly([sp2, sp1]) ])
+		right = ProdPoly([right, ProdPoly([sp2, sp1]) ])
+		self.assertEqual(solver.eqn.left, left)
+		self.assertEqual(solver.eqn.right, right)
+
+class SolverUtilTest(unittest.TestCase):
+	def test_computeLCM(self):
+		m1, m2, m3 = Monomial(1, Bases.X), Monomial(3, Bases.CONST), Monomial(2, Bases.CONST)
+		sp1, sp2 = SumPoly([m1, m2]), SumPoly([m1, m3])
+		solver = Solver(Eqn(sp1, sp2))
+		self.assertEqual(solver.computeLCM([sp1, sp2]), ProdPoly([sp1, sp2]))
+		print str(solver.computeLCM([sp1, sp1.copy()]))
+		self.assertEqual(solver.computeLCM([sp1, sp1.copy()]), sp1)
+
+#pdb.set_trace()
+
+# TODO: untested code
+# mult1
