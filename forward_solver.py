@@ -35,8 +35,7 @@ class SumPoly(CorePoly):
 		if isinstance(poly, SumPoly):
 			return SumPoly(self.subpoly + poly.subpoly)
 		else:
-			self.subpoly.append(poly) # TODO: these don't return a new polynomial!
-			return self
+			return SumPoly(self.subpoly + [poly])
 	def sub(self, poly) : return self.add(poly.negate())
 	def negate(self): return SumPoly([p.negate() for p in self.subpoly])
 
@@ -108,8 +107,12 @@ class ProdPoly(CorePoly):
 
 	# OVERRIDE MATH OPERATIONS
 	def mult(self,poly): 
-		self.subpoly.append(poly) 
-		return self
+		if isinstance(poly, ProdPoly):
+			return ProdPoly(self.subpoly + poly.subpoly)
+		else:
+			return ProdPoly(self.subpoly + [poly])
+
+	# TODO: should we make copies here?
 	def negate(self): return ProdPoly( [self.subpoly[0].negate()] + self.subpoly[1:] )
 
 	# UTILITY FUNCTIONS
@@ -167,9 +170,7 @@ class ProdPoly(CorePoly):
 class RatPoly(CorePoly):
 	def __init__(self, num, denom): self.num, self.denom = num, denom
 	############################## OPERATIONS ON POLYNOMIAL (NON-REDUCED VERSIONS)  ##############################	
-	def divide(self, other): 
-		self.num = self.num.mult(other) 
-		return self
+	def divide(self, other): return RatPoly(self.num, self.denom.mult(other))
 	def negate(self): return RatPoly(self.num.negate(), self.denom)
 
 	# UTILITY FUNCTIONS
@@ -203,7 +204,7 @@ class RatPoly(CorePoly):
 	def shareFactors(self, other): raise NotImplementedError # override, return true if these polys share factors
 	def cancelNumDenom(self) : raise NotImplementedError# if num and denom have common terms cancel them, #TODO: maybe keep as a function?
 	def multReduce(self, other): raise NotImplementedError# if other occurs in denom, then cancel otherwise just multiply
-	def reciprocal(self): return RatPoly(self.denom.deepCopy(), self.num.deepCopy())
+	def reciprocal(self): return RatPoly(self.denom.copy(), self.num.copy())
 	def numDenomShareFactors(self):
 		if isinstance(self.num, ProdPoly) and isinstance(self.denom, ProdPoly):
 			return self.num.haveCommonFactors(self.denom)
@@ -369,11 +370,13 @@ class Solver:
 			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
 		return changed
 	def simp1(self): 
-		if self.eqn.order() > 2 and not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
+		""" set working mem goal, if order is >= 2 """
+		if self.eqn.order() >= 2 and not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
 			self.working_mem.addGoal(WorkingMem.SET_RHS_ZERO)
 			return True
 		return False
 	def simp2(self): 
+		""" if sum poly has common terms, then add them together """
 		cond	= lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x)
 		action	= SumPoly.sumCommonTerms
 		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
@@ -381,6 +384,7 @@ class Solver:
 			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
 		return changed
 	def simp3(self): 
+		""" if solving linear eqn, move everything except constant terms to lhs """
 		left, right = self.eqn.left, self.eqn.right
 		# TODO: may have to fix when this rule fires, what if we have x+3 = 2, can't proceed
 		if not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not right.isConstTerm():
@@ -398,6 +402,7 @@ class Solver:
 		return False
 
 	def simp4(self): 
+		""" if equation is higher than 1st degree set rhs to zero"""
 		if self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not self.eqn.right.isZero():
 			self.eqn.left = self.eqn.left.sub(self.eqn.right)
 			self.eqn.right = self.eqn.right.sub(self.eqn.right)
@@ -405,6 +410,7 @@ class Solver:
 		return False
 
 	def simp5(self): 
+		""" if num and denom of a rational polynomial have common factors, remove them"""
 		cond = lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p)
 		action = RatPoly.cancelCommonFactors
 
@@ -414,6 +420,7 @@ class Solver:
 		return changed
 
 	def mult1(self):
+		""" if denom of rational poly is a fraction, multiply by its reciprocal """
 		cond	= lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly)
 		action	= lambda p: ProdPoly([p.num, p.denom.reciprocal()])
 		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
@@ -422,6 +429,9 @@ class Solver:
 		return changed
 
 	def mult2(self):
+		""" if both sides of eqn have fractions, then multiply each side by lcm
+			over all fractions.
+		"""
 		if self.eqn.left.hasFractions() and  self.eqn.right.hasFractions():
 			# get list of denom from both sides
 			left_denom = [i.denom for i in self.eqn.left.getFractions()]
@@ -493,7 +503,7 @@ class Solver:
 	def solve(self):
 		"""solve the equation given"""
 		while not self.checkWinCond():
-			print str(self.eqn)
+			#print str(self.eqn)
 			if self.checkRuleSet(self.SIMP_RULES):
 				continue
 			elif self.checkRuleSet(self.MULT_RULES):
@@ -504,10 +514,10 @@ class Solver:
 				continue
 			else:
 				# TODO: change this later
-				print "no rules apply"
-				print str(self.eqn)
+				#print "no rules apply"
+				#print str(self.eqn)
 				return str(self.eqn)
-		print str(self.eqn)
+		#print str(self.eqn)
 		return str(self.eqn)
 
 	def checkWinCond(self):
@@ -515,7 +525,7 @@ class Solver:
 		# if any win condition is active, then we've solved the equation
 		for rule in self.WIN_RULES:
 			if rule(self) :
-				print "win condition " + rule.__name__ + " applies"
+				#print "win condition " + rule.__name__ + " applies"
 				return True
 		return False
 
@@ -523,60 +533,9 @@ class Solver:
 		""" check an argument ruleset"""
 		for rule in ruleset:
 			if rule(self) :
-				print 'applied: ' + rule.__name__
+				#print 'applied: ' + rule.__name__
 				return True
 		return False
 
-# TODO: remove later
-# testing code		
-def testSolve1():
-	left = SumPoly([Monomial(10, Bases.X), Monomial(3, Bases.CONST), Monomial(-3, Bases.CONST)])
-	right = Monomial(10, Bases.CONST)
-
-	solver = Solver(Eqn(left, right))
-	solver.solve()
-def testSolve2():
-	left = SumPoly([Monomial(10, Bases.X), Monomial(3, Bases.CONST)])
-	right = SumPoly([Monomial(10, Bases.CONST), Monomial(3, Bases.X)])
-
-	solver = Solver(Eqn(left, right))
-	solver.solve()
-def testSolve3():
-	left = SumPoly([Monomial(3, Bases.X), Monomial(1, Bases.X2)])
-	right = SumPoly([Monomial(3, Bases.CONST), Monomial(1, Bases.X2)])
-
-	solver = Solver(Eqn(left, right))
-	solver.solve()
-def testSolve4():
-	sp1 = SumPoly([Monomial(1, Bases.X), Monomial(1, Bases.CONST)])
-	sp2 = SumPoly([Monomial(1, Bases.X), Monomial(3, Bases.CONST)])
-
-	num = ProdPoly([Monomial(1, Bases.X2), sp1, sp2])
-	denom  = ProdPoly([sp1, sp2])
-
-	left = SumPoly([RatPoly(num,denom), Monomial(3, Bases.X)])
-	right = SumPoly([Monomial(3, Bases.CONST), Monomial(1, Bases.X2)])
-
-	solver = Solver(Eqn(left, right))
-	#pdb.set_trace()
-	solver.solve()
-	print "\n"
-
-def testSolve5():
-	sp1 = SumPoly([Monomial(1, Bases.X), Monomial(1, Bases.CONST)])
-	sp2 = SumPoly([Monomial(1, Bases.X), Monomial(3, Bases.CONST)])
-
-	left = RatPoly(Monomial(1, Bases.CONST), sp1)
-	right = RatPoly(Monomial(1, Bases.CONST), sp2)
-	solver = Solver(Eqn(left, right))
-	pdb.set_trace()
-	solver.solve()
-def main():
-	testSolve1()
-	testSolve2()
-	testSolve3()
-	testSolve4()
-	testSolve5()
-#main()
 # Notes:
 #	all/any for reducing a list of booleans

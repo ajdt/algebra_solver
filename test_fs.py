@@ -100,11 +100,60 @@ class SampleCasesTest(unittest.TestCase):
 		self.assertEqual(solver.solve(), '3x + -3=0')
 
 class SolverRuleTest(unittest.TestCase):
-	def test_simp0(self):
-	def test_mult2(self):
-		sp1 = SumPoly([Monomial(1, Bases.X), Monomial(1, Bases.CONST)])
-		sp2 = SumPoly([Monomial(1, Bases.X), Monomial(3, Bases.CONST)])
+	def setUp(self):
+		self.sp1 = SumPoly([Monomial(1, Bases.X), Monomial(1, Bases.CONST)]) # (x + 1)
+		self.sp2 = SumPoly([Monomial(1, Bases.X), Monomial(3, Bases.CONST)]) # (x + 3)
+		self.sp3 = SumPoly([Monomial(3, Bases.X), Monomial(3, Bases.CONST)]) # (3x + 3)
+		self.solver = Solver(Eqn(self.sp1, self.sp2))
 
+	def test_simp0(self):
+		rp = RatPoly(self.sp1.add(Monomial(0, Bases.X)), self.sp2) # (x+1 + 0)
+		self.solver.eqn = Eqn(rp, self.sp2)
+		self.assertTrue(self.solver.simp0())
+		#print "simp0 " + str(self.solver.eqn.left)
+		#print "simp0 " + str(RatPoly(self.sp1, self.sp2))
+		self.assertEqual(self.solver.eqn.left, RatPoly(self.sp1, self.sp2))
+	
+	def test_simp1(self):
+		self.solver.eqn = Eqn(ProdPoly([self.sp1, self.sp2]), self.sp2.copy())
+		self.assertTrue(self.solver.simp1())
+		self.assertTrue(self.solver.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO))
+	def test_simp2(self):
+		self.solver.eqn = Eqn(self.sp1.add(self.sp2), self.sp1)
+		self.assertTrue(self.solver.simp2())
+		self.assertEqual(self.solver.eqn.left, SumPoly([Monomial(2, Bases.X), Monomial(4, Bases.CONST)]) )
+	def test_simp3(self):
+		self.solver.eqn = Eqn(self.sp3, self.sp1) # (3x + 3 = x +1 )
+		self.assertTrue(self.solver.simp3())
+		left = self.sp3.add( SumPoly([Monomial(-1, Bases.X), Monomial(-3, Bases.CONST)]) )
+		right = self.sp1.add(SumPoly([Monomial(-3, Bases.CONST), Monomial(-1, Bases.X)]))
+		self.assertEqual(self.solver.eqn.left, left) # (3x + 2 - x -2 )
+		self.assertEqual(self.solver.eqn.right, right) # (x + 1 -2 -x)
+	def test_simp4(self):
+		self.solver.working_mem = WorkingMem() # ensure goal is in wm
+		self.solver.working_mem.addGoal(WorkingMem.SET_RHS_ZERO)
+
+		# set eqn to (x+1)(x+3) = (3x + 3)
+		prod_poly = ProdPoly([self.sp1, self.sp2])
+		self.solver.eqn = Eqn(prod_poly, self.sp3)
+		self.assertTrue( self.solver.simp4())
+		self.assertEqual(self.solver.eqn.left, prod_poly.sub(self.sp3))
+		self.assertTrue(self.sp3.sub(self.sp3.copy()))
+	def test_simp5(self):
+		rp = RatPoly(self.sp3, ProdPoly([self.sp1, self.sp3]))
+		self.solver.eqn = Eqn(rp, self.sp2)
+		self.assertTrue(self.solver.simp5())
+		self.assertEqual(self.solver.eqn.left, RatPoly(Monomial(1, Bases.CONST), self.sp1) )
+	
+	def test_mult1(self):
+		rp = RatPoly(self.sp3, ProdPoly([self.sp1, self.sp3]))
+		rp2 = RatPoly(self.sp2, rp) # (x+3) / (3x+3)/((x+1)(3x+3))
+		self.solver.eqn = Eqn(rp2, self.sp2)
+		self.assertTrue(self.solver.mult1())
+		self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp2, rp.reciprocal()]))
+
+	def test_mult2(self):
+		sp1, sp2 = self.sp1, self.sp2
 		left = RatPoly(Monomial(1, Bases.CONST), sp1)
 		right = RatPoly(Monomial(1, Bases.CONST), sp2)
 		solver = Solver(Eqn(left, right))
