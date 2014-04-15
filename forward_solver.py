@@ -22,7 +22,6 @@ class CorePoly(object):
 	def isOne(self): return False
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
 	def isConstTerm(self): return self.order() == 0 # NOTE: this works for all  poly types
-	def shareFactors(self, other): return False
 
 	############################## TERMS AND FACTORS ##############################	
 	def isConstantTerm(self): return False
@@ -39,11 +38,10 @@ class SumPoly(CorePoly):
 	def sub(self, poly) : return self.add(poly.negate())
 	def negate(self): return SumPoly([p.negate() for p in self.subpoly])
 
-	# IMPLEMENT HELPERS
+	# HELPERS
 	def order(self) : return max([p.order() for p in self.subpoly])
 	def copy(self): return SumPoly( [p.copy() for p in self.subpoly] )
-	def __str__(self): 
-		return  ' + '.join([str(p) for p in self.subpoly])
+	def __str__(self): return  ' + '.join([str(p) for p in self.subpoly])
 
 	def __eq__(self, other): 
 		# same class types and same number of terms
@@ -59,14 +57,13 @@ class SumPoly(CorePoly):
 	def isLinearStdPoly(self): return all([isinstance(p, Monomial) for p in self.subpoly]) and self.order() < 2
 	def isFactored(self): self.order() < 2
 	def isSameTerm(self, other): return self == other
-	def shareFactors(self, other): return self == other
 
 	# MISC HELPERS
 	def getFractions(self): return [ p for p in self.subpoly if isinstance(p, RatPoly) ]
 	def coeffOf(self, base): 
 		# only returns the first subpoly of that base
 		for p in self.subpoly:
-			if p.base == base:
+			if isinstance(p, Monomial) and p.base == base:
 				return p.coef
 		return None
 
@@ -157,7 +154,6 @@ class ProdPoly(CorePoly):
 	def commonFactors(self): raise NotImplementedError
 	def commonFactors(self, other): raise NotImplementedError
 	def isConstantTerm(self): return False
-	def shareFactors(self, other): return any([p in other.subpoly for p in self.subpoly])
 	def cancelFactors(self, factors): # used by RatPoly
 		new_subpoly = [ p for p in self.subpoly if p not in factors]
 		if len(new_subpoly) == 0:
@@ -201,7 +197,6 @@ class RatPoly(CorePoly):
 			return self.add(other)
 		else:
 			return RatPoly(self.num.add(other.num), self.denom.copy())
-	def shareFactors(self, other): raise NotImplementedError # override, return true if these polys share factors
 	def cancelNumDenom(self) : raise NotImplementedError# if num and denom have common terms cancel them, #TODO: maybe keep as a function?
 	def multReduce(self, other): raise NotImplementedError# if other occurs in denom, then cancel otherwise just multiply
 	def reciprocal(self): return RatPoly(self.denom.copy(), self.num.copy())
@@ -234,8 +229,6 @@ class RatPoly(CorePoly):
 		elif self.num == self.denom:
 			return Monomial(1, Bases.CONST)
 		return self
-
-		
 
 class Bases: # used as an enum
 	CONST, X, X2, X3 = range(4)
@@ -288,7 +281,6 @@ class Monomial(CorePoly):
 			return self.add(other)
 		else:
 			return Monomial(self.coef + other.coef, self.base)
-	def shareFactors(self, other): return self == other
 class Eqn:
 	def __init__(self, left, right):
 		self.left, self.right = left, right
@@ -345,8 +337,7 @@ class Solver:
 					return (RatPoly(poly.num, new_denom), changed)
 			else : # SumPoly or ProdPoly
 				ls = [self.polyRule(p, condition, action) for p in poly.subpoly]
-				terms = map(lambda x: x[0], ls)
-				bools = map(lambda x: x[1], ls)
+				terms, bools = map(lambda x: x[0], ls), map(lambda x: x[1], ls)
 				result = SumPoly(terms) if isinstance(poly, SumPoly) else ProdPoly(terms)
 				return (result, any(bools))
 
