@@ -1,4 +1,13 @@
 import pdb # used for debugging
+# Utility Functions
+def simplifyPolyTerms(term_list, default, constructor):
+	if len(term_list) == 0 :
+		return default
+	elif len(term_list) == 1 :
+		return term_list[0]
+	else:
+		return constructor(term_list)
+
 class CorePoly(object):
 	"""basic polynomial, mostly contains code to be overridden"""
 	############################## OPERATIONS ON POLYNOMIAL (NON-REDUCED VERSIONS)  ##############################	
@@ -94,10 +103,7 @@ class SumPoly(CorePoly):
 			ls = filter(lambda x: not ls[0].isSameTerm(x), ls)
 
 		# return new poly 
-		if len(condensed) > 1:
-			return SumPoly(condensed)
-		else:
-			return condensed[0]
+		return simplifyPolyTerms(condensed, Monomial.zero(), SumPoly)
 
 class ProdPoly(CorePoly):
 	def __init__(self, poly_list): self.subpoly = poly_list
@@ -157,12 +163,7 @@ class ProdPoly(CorePoly):
 					new_terms.append(p.mult(q))
 
 		# return sumpoly as a result
-		if len(new_terms) == 0 :
-			return Monomial(1, Bases.CONST)
-		elif len(new_terms) == 1:
-			return new_terms[0]
-		else :
-			return SumPoly(new_terms)
+		return simplifyPolyTerms(new_terms, Monomial.zero(), SumPoly)
 
 	def getFractions(self): return [ p for p in self.subpoly if isinstance(p, RatPoly) ]
 	def getNonConstTerms(self): return [p for p in self.subpoly if not p.isConstTerm()]
@@ -178,12 +179,7 @@ class ProdPoly(CorePoly):
 	def isConstantTerm(self): return False
 	def cancelFactors(self, factors): # used by RatPoly
 		new_subpoly = [ p for p in self.subpoly if p not in factors]
-		if len(new_subpoly) == 0:
-			return Monomial(1, Bases.CONST)
-		elif len(new_subpoly) == 1:
-			return new_subpoly[0]
-		else :
-			return ProdPoly(new_subpoly)
+		return simplifyPolyTerms(new_subpoly, Monomial.one(), ProdPoly)
 
 class RatPoly(CorePoly):
 	def __init__(self, num, denom): self.num, self.denom = num, denom
@@ -252,9 +248,9 @@ class RatPoly(CorePoly):
 			return new_num # no longer a fraction
 		elif isinstance(self.denom, ProdPoly) and self.num in self.denom.subpoly:
 			new_denom = self.denom.cancelFactors([self.num])
-			return RatPoly(Monomial(1, Bases.CONST), new_denom)
+			return RatPoly(Monomial.one(), new_denom)
 		elif self.num == self.denom:
-			return Monomial(1, Bases.CONST)
+			return Monomial.one()
 		return self
 
 class Bases: # used as an enum
@@ -299,6 +295,10 @@ class Monomial(CorePoly):
 	def coeffOf(self, base): return self.coef if base == self.base else None
 
 	# MISC HELPERS
+	@staticmethod
+	def zero(): return Monomial(0, Bases.CONST)
+	@staticmethod
+	def one(): return Monomial(1, Bases.CONST)
 	def getFractions(self): return []
 	def getNonConstTerms(self): return [self] if self.order() > 0  else []
 	def getConstTerms(self): return [self] if self.order() == 0  else []
@@ -368,39 +368,36 @@ class Solver:
 				result = SumPoly(terms) if isinstance(poly, SumPoly) else ProdPoly(terms)
 				return (result, any(bools))
 
-	# TODO: move these helper methods elsewhere
+	def checkEqnForRule(self, cond, action):
+		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
+		if not changed:
+			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
+		return changed
+		
 	@staticmethod
 	def _removeZeroes(sum_poly):
 		no_zeroes = [p for p in sum_poly.subpoly if not p.isZero() ]
-		if len(no_zeroes) == 0:
-			return Monomial(0, Bases.CONST)
-		elif len(no_zeroes) == 1:
-			return no_zeroes[0]
-		else:
-			return SumPoly(no_zeroes)
+		return simplifyPolyTerms(no_zeroes, Monomial.zero(), SumPoly)
 
 	def simp0(self): 
 		""" if sumpoly has zeroes remove them """
 		cond	= lambda x : isinstance(x, SumPoly) and any([p.isZero() for p in x.subpoly]) 
 		action	= Solver._removeZeroes
-		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
-		if not changed:
-			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
-		return changed
+		return self.checkEqnForRule(cond, action)
+
 	def simp1(self): 
 		""" set working mem goal, if order is >= 2 """
 		if self.eqn.order() >= 2 and not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
 			self.working_mem.addGoal(WorkingMem.SET_RHS_ZERO)
 			return True
 		return False
+
 	def simp2(self): 
 		""" if sum poly has common terms, then add them together """
 		cond	= lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x)
 		action	= SumPoly.sumCommonTerms
-		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
-		if not changed:
-			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
-		return changed
+		return self.checkEqnForRule(cond, action)
+
 	def simp3(self): 
 		""" if solving linear eqn, move everything except constant terms to lhs """
 		left, right = self.eqn.left, self.eqn.right
@@ -409,13 +406,10 @@ class Solver:
 			to_remove = right.getNonConstTerms() + left.getConstTerms()
 			if len(to_remove) == 0:
 				return False
-			if len(to_remove) == 1:
-				remove_poly = to_remove[0]
-			else :
-				remove_poly = SumPoly(to_remove)
+			else:
+				remove_poly =  simplifyPolyTerms(to_remove, Monomial.zero(), SumPoly)
 			# subtract the terms from both sides
-			self.eqn.left = self.eqn.left.sub(remove_poly)
-			self.eqn.right = self.eqn.right.sub(remove_poly)
+			self.eqn.left, self.eqn.right  = self.eqn.left.sub(remove_poly), self.eqn.right.sub(remove_poly)
 			return True
 		return False
 
@@ -431,20 +425,13 @@ class Solver:
 		""" if num and denom of a rational polynomial have common factors, remove them"""
 		cond = lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p)
 		action = RatPoly.cancelCommonFactors
-
-		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
-		if not changed:
-			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
-		return changed
+		return self.checkEqnForRule(cond, action)
 
 	def mult1(self):
 		""" if denom of rational poly is a fraction, multiply by its reciprocal """
 		cond	= lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly)
 		action	= lambda p: ProdPoly([p.num, p.denom.reciprocal()])
-		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
-		if not changed:
-			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
-		return changed
+		return self.checkEqnForRule(cond, action)
 
 	def mult2(self):
 		""" if both sides of eqn have fractions, then multiply each side by lcm
@@ -476,26 +463,17 @@ class Solver:
 	def mult4(self):
 		cond = lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(p.getFractions()) > 1
 		action = Solver.mult4Helper
-		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
-		if not changed:
-			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
-		return changed
+		return self.checkEqnForRule(cond, action)
 
 	@staticmethod
 	def mult5Helper(prod_poly):
 		new_terms = [ProdPoly.foil(prod_poly.subpoly[0], prod_poly.subpoly[1]) ] + prod_poly.subpoly[2:]
-		if len(new_terms) == 1 :
-			return new_terms[0]
-		else :
-			return ProdPoly(new_terms)
+		return simplifyPolyTerms(new_terms, Monomial.zero(), ProdPoly)
 
 	def mult5(self):
 		cond = lambda p: isinstance(p, ProdPoly)
 		action = Solver.mult5Helper
-		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
-		if not changed:
-			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
-		return changed
+		return self.checkEqnForRule(cond, action)
 
 	@staticmethod
 	def computeLCM( poly_list):
@@ -516,10 +494,7 @@ class Solver:
 
 			elif p not in terms:
 				terms.append(p)
-		if len(terms) == 1:
-			return terms[0]
-		else :
-			return ProdPoly(terms)
+		return simplifyPolyTerms(terms, Monomial.one(), ProdPoly)
 
 
 	############################## checking and solving ##############################	
