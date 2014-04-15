@@ -140,6 +140,30 @@ class ProdPoly(CorePoly):
 
 
 	# MISC HELPERS
+	@staticmethod
+	def foil(poly1, poly2):
+		""" multiply every term between both polynomials together """
+		# TODO: input validation, what if given product polys or rational polys?
+		terms1 =  poly1.subpoly if isinstance(poly1, SumPoly)  else [poly1]
+		terms2 =  poly2.subpoly if isinstance(poly2, SumPoly)  else [poly2]
+
+		# multiply each pair of terms
+		new_terms = []
+		for p in terms1:
+			for q in terms2:
+				if isinstance(p, Monomial) and isinstance(p, Monomial):
+					new_terms.append(Monomial(p.coef * q.coef, p.base + q.base))
+				else:
+					new_terms.append(p.mult(q))
+
+		# return sumpoly as a result
+		if len(new_terms) == 0 :
+			return Monomial(1, Bases.CONST)
+		elif len(new_terms) == 1:
+			return new_terms[0]
+		else :
+			return SumPoly(new_terms)
+
 	def getFractions(self): return [ p for p in self.subpoly if isinstance(p, RatPoly) ]
 	def getNonConstTerms(self): return [p for p in self.subpoly if not p.isConstTerm()]
 	def getConstTerms(self): return [p for p in self.subpoly if p.isConstTerm()]
@@ -149,8 +173,6 @@ class ProdPoly(CorePoly):
 			return self.add(other)
 		else:
 			return ProdPoly(self.subpoly + [Monomial(coef=2, base=Bases.CONST)])
-	def foil(self): raise NotImplementedError
-		# does two actions, foil and simplify foiled terms
 	def commonFactors(self): raise NotImplementedError
 	def commonFactors(self, other): raise NotImplementedError
 	def isConstantTerm(self): return False
@@ -166,6 +188,11 @@ class ProdPoly(CorePoly):
 class RatPoly(CorePoly):
 	def __init__(self, num, denom): self.num, self.denom = num, denom
 	############################## OPERATIONS ON POLYNOMIAL (NON-REDUCED VERSIONS)  ##############################	
+	def mult(self, other) : 
+		if isinstance(other, RatPoly): 
+			return RatPoly(self.num.mult(other.num), self.denom.mult(other.denom))
+		else:
+			return ProdPoly([self, other])
 	def divide(self, other): return RatPoly(self.num, self.denom.mult(other))
 	def negate(self): return RatPoly(self.num.negate(), self.denom)
 
@@ -453,9 +480,22 @@ class Solver:
 		if not changed:
 			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
 		return changed
-	#def mult5(self):
-	#	cond = lambda p: isinstance(p, ProdPoly)
-	#	action = ProdPoly.foil()
+
+	@staticmethod
+	def mult5Helper(prod_poly):
+		new_terms = [ProdPoly.foil(prod_poly.subpoly[0], prod_poly.subpoly[1]) ] + prod_poly.subpoly[2:]
+		if len(new_terms) == 1 :
+			return new_terms[0]
+		else :
+			return ProdPoly(new_terms)
+
+	def mult5(self):
+		cond = lambda p: isinstance(p, ProdPoly)
+		action = Solver.mult5Helper
+		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
+		if not changed:
+			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
+		return changed
 
 	@staticmethod
 	def computeLCM( poly_list):

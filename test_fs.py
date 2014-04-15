@@ -164,6 +164,12 @@ class SolverRuleTest(unittest.TestCase):
 		self.assertEqual(solver.eqn.left, left)
 		self.assertEqual(solver.eqn.right, right)
 
+	# TODO: test for mult4
+	def test_mult5(self):
+		self.solver.eqn = Eqn(ProdPoly([self.sp1, self.sp2]), self.sp3)
+		self.assertTrue(self.solver.mult5())
+		self.assertEqual(self.solver.eqn.left, SumPoly([ Monomial(1, Bases.X2), Monomial(3, Bases.X), Monomial(1, Bases.X), Monomial(3, Bases.CONST)]) ) # x^2 + 3x + x + 3
+
 class SolverUtilTest(unittest.TestCase):
 	def test_computeLCM(self):
 		m1, m2, m3 = Monomial(1, Bases.X), Monomial(3, Bases.CONST), Monomial(2, Bases.CONST)
