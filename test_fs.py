@@ -104,6 +104,13 @@ class SolverRuleTest(unittest.TestCase):
 		self.sp1 = SumPoly([Monomial(1, Bases.X), Monomial(1, Bases.CONST)]) # (x + 1)
 		self.sp2 = SumPoly([Monomial(1, Bases.X), Monomial(3, Bases.CONST)]) # (x + 3)
 		self.sp3 = SumPoly([Monomial(3, Bases.X), Monomial(3, Bases.CONST)]) # (3x + 3)
+		self.sp4 = SumPoly([Monomial(1, Bases.X2), Monomial(4, Bases.X), Monomial(3, Bases.CONST)]) # (x^2 + 4x + 3)
+		self.sp5 = SumPoly([Monomial(1, Bases.X2), Monomial(2, Bases.X), Monomial(3, Bases.CONST)]) # (x^2 + 2x + 3) , for completing the square test
+		self.sp6 = SumPoly([Monomial(1, Bases.X3), Monomial(1, Bases.X2), Monomial(-9, Bases.X), Monomial(-9, Bases.CONST)]) # (x^3 + x^2 -9x -9 )
+		self.sp7 = SumPoly([Monomial(1, Bases.X), Monomial(-3, Bases.CONST)]) # (x - 3)
+		self.sp8 = SumPoly([Monomial(1, Bases.X3), Monomial(5, Bases.X2), Monomial(1, Bases.X), Monomial(5, Bases.CONST)]) # (x^3 + 5x^2 +x +5 )
+		self.sp9 = SumPoly([Monomial(1, Bases.X), Monomial(5, Bases.CONST)]) # (x + 3)
+		self.sp10 = SumPoly([Monomial(1, Bases.X2), Monomial(1, Bases.CONST)]) # (x^2 + 1)
 		self.solver = Solver(Eqn(self.sp1, self.sp2))
 
 	def test_simp0(self):
@@ -169,6 +176,28 @@ class SolverRuleTest(unittest.TestCase):
 		self.solver.eqn = Eqn(ProdPoly([self.sp1, self.sp2]), self.sp3)
 		self.assertTrue(self.solver.mult5())
 		self.assertEqual(self.solver.eqn.left, SumPoly([ Monomial(1, Bases.X2), Monomial(3, Bases.X), Monomial(1, Bases.X), Monomial(3, Bases.CONST)]) ) # x^2 + 3x + x + 3
+
+	def test_heur1(self):
+		self.solver.eqn = Eqn(self.sp4, self.sp3)
+		self.assertTrue(self.solver.heur1())
+		self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp1, self.sp2]))
+
+	def test_heur2(self):
+		self.solver.eqn = Eqn(self.sp5, self.sp3)
+		self.assertTrue(self.solver.heur2())
+		self.assertEqual(self.solver.eqn.left, SumPoly([ProdPoly([self.sp1, self.sp1]), Monomial(2, Bases.CONST)]))
+
+	def test_heur3(self):
+		# factor down to linear terms
+		self.solver.eqn = Eqn(self.sp6, self.sp3)
+		self.assertTrue(self.solver.heur3())
+		self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp1, self.sp2, self.sp7]))
+
+		# factor when can't reduce a quadratic term
+		self.solver.eqn = Eqn(self.sp8, self.sp3)
+		self.assertTrue(self.solver.heur3())
+		self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp9, self.sp10]))
+		
 
 class SolverUtilTest(unittest.TestCase):
 	def test_computeLCM(self):

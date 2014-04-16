@@ -1,4 +1,9 @@
 import pdb # used for debugging
+
+# sympy functionality
+import sympy as sp
+x = sp.symbols('x')
+
 # Utility Functions
 def simplifyPolyTerms(term_list, default, constructor):
 	if len(term_list) == 0 :
@@ -69,7 +74,7 @@ class SumPoly(CorePoly):
 
 	# MISC HELPERS
 	def getFractions(self): return [ p for p in self.subpoly if isinstance(p, RatPoly) ]
-	def coeffOf(self, base): 
+	def coeffOf(self, base): # TODO: assumes only one monomial of each base type exists
 		# only returns the first subpoly of that base
 		for p in self.subpoly:
 			if isinstance(p, Monomial) and p.base == base:
@@ -475,6 +480,24 @@ class Solver:
 		action = Solver.mult5Helper
 		return self.checkEqnForRule(cond, action)
 
+	def heur1(self):
+		""" attempt to factor a polynomial of degree  == 2 """
+		cond = lambda p: p.order() == 2 and isinstance(p, SumPoly) and Solver.factor(p)[1]
+		action = lambda p : Solver.factor(p)[0]
+		return self.checkEqnForRule(cond, action)
+
+	def heur2(self):
+		""" factor by completing the square """
+		cond = lambda p: p.order() == 2 and isinstance(p, SumPoly) and Solver.completeSquare(p)[1]
+		action = lambda p : Solver.completeSquare(p)[0]
+		return self.checkEqnForRule(cond, action)
+
+	def heur3(self):
+		""" attempt to factor a polynomial of degree  == 3 """
+		cond = lambda p: p.order() == 3 and isinstance(p, SumPoly) and Solver.factorCubic(p)[1]
+		action = lambda p : Solver.factorCubic(p)[0]
+		return self.checkEqnForRule(cond, action)
+
 	@staticmethod
 	def computeLCM( poly_list):
 		""" compute the lcm of a list of fractions"""
@@ -497,6 +520,73 @@ class Solver:
 		return simplifyPolyTerms(terms, Monomial.one(), ProdPoly)
 
 
+	@staticmethod
+	def completeSquare(sum_poly):
+		if not isinstance(sum_poly, SumPoly):
+			raise TypeError
+		a, b, c, = sum_poly.coeffOf(Bases.X2), sum_poly.coeffOf(Bases.X), sum_poly.coeffOf(Bases.CONST)
+		# TODO: for now assumes a = 1, to avoid fractions
+		d = b**2/4
+
+		poly = sp.Poly(a*x**2 + b*x + d).factor()
+		if isinstance(poly, sp.Pow): # factoring was successful
+			left = SumPoly([Monomial(poly.args[0].coeff(x), Bases.X), Monomial(sp.Poly(poly.args[0]).coeffs()[-1], Bases.CONST)])
+			right = left.copy()
+			return (SumPoly([ProdPoly([left, right]), Monomial(c - d, Bases.CONST)]), True)
+		else:
+			return (sum_poly, False)
+		
+
+
+	@staticmethod
+	def factorCubic(sum_poly):
+		"""
+		factors a sumpoly that is in standard form
+		@return: (factored_poly, True) otherwise (original_poly, False)
+		XXX: assumes poly is in standard form
+		"""
+		if not isinstance(sum_poly, SumPoly):
+			raise TypeError
+		# TODO: switch to using sympy in the future
+		a, b, c, d = sum_poly.coeffOf(Bases.X3), sum_poly.coeffOf(Bases.X2), sum_poly.coeffOf(Bases.X), sum_poly.coeffOf(Bases.CONST)
+
+		poly = sp.Poly(a*x**3 + b*x**2 + c*x + d).factor()
+		if isinstance(poly, sp.Mul): # factoring was successful
+			if len(poly.args) == 3: # factored to linear terms
+				left = SumPoly([Monomial(poly.args[0].coeff(x), Bases.X), Monomial(sp.Poly(poly.args[0]).coeffs()[-1], Bases.CONST)])
+				middle = SumPoly([Monomial(poly.args[1].coeff(x), Bases.X), Monomial(sp.Poly(poly.args[1]).coeffs()[-1], Bases.CONST)])
+				right = SumPoly([Monomial(poly.args[2].coeff(x), Bases.X), Monomial(sp.Poly(poly.args[2]).coeffs()[-1], Bases.CONST)])
+				return (ProdPoly([left, middle, right]), True)
+				
+			else: # factored to one linear and one square term
+				linear, quad = poly.args if poly.args[0].coeff(x**2) == 0 else tuple(reversed(poly.args))
+				left = SumPoly([Monomial(linear.coeff(x), Bases.X), Monomial(sp.Poly(linear).coeffs()[-1], Bases.CONST)])
+				# TODO: Uuuuugly, rework the line below. It looks awful
+				right = Solver._removeZeroes(SumPoly([Monomial(quad.coeff(x**2), Bases.X2), Monomial(quad.coeff(x), Bases.X), Monomial(sp.Poly(quad).coeffs()[-1], Bases.CONST)]) )
+			return (ProdPoly([left, right]), True)
+		else:
+			return (sum_poly, False)
+
+	@staticmethod
+	def factor(sum_poly):
+		"""
+		factors a sumpoly that is in standard form
+		@return: (factored_poly, True) otherwise (original_poly, False)
+		XXX: assumes poly is in standard form
+		"""
+		if not isinstance(sum_poly, SumPoly):
+			raise TypeError
+		# TODO: switch to using sympy in the future
+		a, b, c, = sum_poly.coeffOf(Bases.X2), sum_poly.coeffOf(Bases.X), sum_poly.coeffOf(Bases.CONST)
+
+		poly = sp.Poly(a*x**2 + b*x + c).factor()
+		if isinstance(poly, sp.Mul): # factoring was successful
+			left = SumPoly([Monomial(poly.args[0].coeff(x), Bases.X), Monomial(sp.Poly(poly.args[0]).coeffs()[-1], Bases.CONST)])
+			right = SumPoly([Monomial(poly.args[1].coeff(x), Bases.X), Monomial(sp.Poly(poly.args[1]).coeffs()[-1], Bases.CONST)])
+			return (ProdPoly([left, right]), True)
+		else:
+			return (sum_poly, False)
+	
 	############################## checking and solving ##############################	
 	## list of rules and precedences they take
 	SIMP_RULES		= [simp0, simp1, simp2, simp3, simp4, simp5]
