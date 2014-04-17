@@ -13,6 +13,8 @@ def simplifyPolyTerms(term_list, default, constructor):
 		return term_list[0]
 	else:
 		return constructor(term_list)
+def mergeLists(list_of_lists):
+	return reduce(lambda x, y: x + y, list_of_lists)
 
 class CorePoly(object):
 	"""basic polynomial, mostly contains code to be overridden"""
@@ -87,8 +89,8 @@ class SumPoly(CorePoly):
 	def sumSameTerm(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
 		return sumCommonTerms(SumPoly(self.subpoly + other.subpoly))
 	def isConstantTerm(self): return self.order() == 0
-	def getNonConstTerms(self): return [ p for p in self.subpoly if not p.isConstTerm() ]
-	def getConstTerms(self): return [ p for p in self.subpoly if p.isConstTerm() ]
+	def getNonConstTerms(self): return mergeLists([ p.getNonConstTerms() for p in self.subpoly if isinstance(p, StdPoly)])
+	def getConstTerms(self): return mergeLists([ p.getConstTerms() for p in self.subpoly if isinstance(p, StdPoly)])
 	def distribute(multiplier): return SumPoly( [p.mult(multiplier) for p in self.subpoly] )
 	def hasCommonTerms(self):
 		for idx, poly in enumerate(self.subpoly):
@@ -302,8 +304,8 @@ class StdPoly(CorePoly):
 	@staticmethod
 	def one(): return StdPoly(1)
 	def getFractions(self): return []
-	def getNonConstTerms(self): return [self] if self.order() > 0  else []
-	def getConstTerms(self): return [self] if self.order() == 0  else []
+	def getNonConstTerms(self): return [ StdPoly((self.poly - self.poly.all_coeffs()[-1]).as_expr() ) ] if self.order() > 0 else []
+	def getConstTerms(self): return [ StdPoly(self.poly.all_coeffs()[-1]) ]
 	############################## TERMS AND FACTORS ##############################
 	def sumSameTerm(self, other):
 		if not self.isSameTerm(other):
@@ -480,19 +482,20 @@ class Solver:
 
 	def heur1(self):
 		""" attempt to factor a polynomial of degree  == 2 """
-		cond = lambda p: p.order() == 2 and isinstance(p, SumPoly) and Solver.factor(p)[1]
+		# TODO: fix this to handle SumPoly's also!!
+		cond = lambda p:  isinstance(p, StdPoly) and p.poly.is_quadratic and isinstance(p.poly.factor(), sp.Mul) # TODO: look for is_factorable() method
 		action = lambda p : Solver.factor(p)[0]
 		return self.checkEqnForRule(cond, action)
 
 	def heur2(self):
 		""" factor by completing the square """
-		cond = lambda p: p.order() == 2 and isinstance(p, SumPoly) and Solver.completeSquare(p)[1]
+		cond = lambda p: isinstance(p, StdPoly) and p.poly.is_quadratic and Solver.completeSquare(p)[1]
 		action = lambda p : Solver.completeSquare(p)[0]
 		return self.checkEqnForRule(cond, action)
 
 	def heur3(self):
 		""" attempt to factor a polynomial of degree  == 3 """
-		cond = lambda p: p.order() == 3 and isinstance(p, SumPoly) and Solver.factorCubic(p)[1]
+		cond = lambda p: p.order() == 3 and isinstance(p, StdPoly) and Solver.factorCubic(p)[1]
 		action = lambda p : Solver.factorCubic(p)[0]
 		return self.checkEqnForRule(cond, action)
 
@@ -519,71 +522,54 @@ class Solver:
 
 
 	@staticmethod
-	def completeSquare(sum_poly):
-		if not isinstance(sum_poly, SumPoly):
+	def completeSquare(std_poly):
+		if not isinstance(std_poly, StdPoly):
 			raise TypeError
-		a, b, c, = sum_poly.coeffOf(Bases.X2), sum_poly.coeffOf(Bases.X), sum_poly.coeffOf(Bases.CONST)
 		# TODO: for now assumes a = 1, to avoid fractions
-		d = b**2/4
-
-		poly = sp.Poly(a*x_symb**2 + b*x_symb + d).factor()
+		d = std_poly.poly.all_coeffs()[-2]**2/4 # take coeff attached to x term
+		c = std_poly.poly.all_coeffs()[-1]
+		poly = (std_poly.poly - c + d).factor()
 		if isinstance(poly, sp.Pow): # factoring was successful
-			left = SumPoly([StdPoly(poly.args[0].coeff(x_symb)**x_symb), StdPoly(sp.Poly(poly.args[0]).coeffs()[-1])])
-			right = left.copy()
-			return (SumPoly([ProdPoly([left, right]), StdPoly(c - d)]), True)
+			factor = StdPoly(poly.args[0])
+			return (SumPoly([ProdPoly([factor, factor.copy()]), StdPoly(c - d)]), True)
 		else:
-			return (sum_poly, False)
+			return (std_poly, False)
 
 
 
 	@staticmethod
-	def factorCubic(sum_poly):
+	def factorCubic(std_poly):
 		"""
 		factors a sumpoly that is in standard form
 		@return: (factored_poly, True) otherwise (original_poly, False)
 		XXX: assumes poly is in standard form
 		"""
-		if not isinstance(sum_poly, SumPoly):
+		if not isinstance(std_poly, StdPoly):
 			raise TypeError
 		# TODO: switch to using sympy in the future
-		a, b, c, d = sum_poly.coeffOf(Bases.X3), sum_poly.coeffOf(Bases.X2), sum_poly.coeffOf(Bases.X), sum_poly.coeffOf(Bases.CONST)
 
-		poly = sp.Poly(a*x_symb**3 + b*x_symb**2 + c*x_symb + d).factor()
+		poly = std_poly.poly.factor()
 		if isinstance(poly, sp.Mul): # factoring was successful
-			if len(poly.args) == 3: # factored to linear terms
-				left = SumPoly([StdPoly(poly.args[0].coeff(x_symb)*x_symb), StdPoly(sp.Poly(poly.args[0]).coeffs()[-1])])
-				middle = SumPoly([StdPoly(poly.args[1].coeff(x_symb)*x_symb), StdPoly(sp.Poly(poly.args[1]).coeffs()[-1])])
-				right = SumPoly([StdPoly(poly.args[2].coeff(x_symb)*x_symb), StdPoly(sp.Poly(poly.args[2]).coeffs()[-1])])
-				return (ProdPoly([left, middle, right]), True)
-
-			else: # factored to one linear and one square term
-				linear, quad = poly.args if poly.args[0].coeff(x_symb**2) == 0 else tuple(reversed(poly.args))
-				left = SumPoly([StdPoly(linear.coeff(x_symb)*x_symb), StdPoly(sp.Poly(linear).coeffs()[-1])])
-				# TODO: Uuuuugly, rework the line below. It looks awful
-				right = Solver._removeZeroes(SumPoly([StdPoly(quad.coeff(x_symb**2)*x_symb**2), StdPoly(quad.coeff(x_symb)*x_symb), StdPoly(sp.Poly(quad).coeffs()[-1])]) )
-			return (ProdPoly([left, right]), True)
+			return (ProdPoly([StdPoly(p) for p in poly.args]), True)
 		else:
-			return (sum_poly, False)
+			return (std_poly, False)
 
 	@staticmethod
-	def factor(sum_poly):
+	def factor(std_poly):
 		"""
-		factors a sumpoly that is in standard form
+		factors a standard poly
 		@return: (factored_poly, True) otherwise (original_poly, False)
 		XXX: assumes poly is in standard form
 		"""
-		if not isinstance(sum_poly, SumPoly):
+		# TODO: remove boolean return value
+		if not isinstance(std_poly, StdPoly):
 			raise TypeError
-		# TODO: switch to using sympy in the future
-		a, b, c, = sum_poly.coeffOf(Bases.X2), sum_poly.coeffOf(Bases.X), sum_poly.coeffOf(Bases.CONST)
 
-		poly = sp.Poly(a*x_symb**2 + b*x_symb + c).factor()
+		poly = std_poly.poly.factor()
 		if isinstance(poly, sp.Mul): # factoring was successful
-			left = SumPoly([StdPoly(poly.args[0].coeff(x_symb)*x_symb), StdPoly(sp.Poly(poly.args[0]).coeffs()[-1])])
-			right = SumPoly([StdPoly(poly.args[1].coeff(x_symb)*x_symb), StdPoly(sp.Poly(poly.args[1]).coeffs()[-1])])
-			return (ProdPoly([left, right]), True)
+			return (ProdPoly([ StdPoly(p) for p in poly.args ]), True)
 		else:
-			return (sum_poly, False)
+			return (std_poly, False)
 
 	############################## checking and solving ##############################
 	## list of rules and precedences they take
