@@ -164,7 +164,7 @@ class ProdPoly(CorePoly):
 		for p in terms1:
 			for q in terms2:
 				if isinstance(p, StdPoly) and isinstance(p, StdPoly):
-					new_terms.append(StdPoly(p.coef() * q.coef(), p.order() + q.order()))
+					new_terms.append(StdPoly( (p.poly * q.poly).as_expr() ))
 				else:
 					new_terms.append(p.mult(q))
 
@@ -179,7 +179,7 @@ class ProdPoly(CorePoly):
 		if not self.isSameTerm(other):
 			return self.add(other)
 		else:
-			return ProdPoly(self.subpoly + [StdPoly(coef=2, base=Bases.CONST)])
+			return ProdPoly(self.subpoly + [StdPoly(2)])
 	def commonFactors(self): raise NotImplementedError
 	def commonFactors(self, other): raise NotImplementedError
 	def isConstantTerm(self): return False
@@ -264,24 +264,24 @@ class Bases: # used as an enum
 
 
 class StdPoly(CorePoly):
-	def __init__(self, coef, base):
-		x_symb = sp.symbols('x')
-		if base == Bases.CONST or coef == 0:
-			self.poly = sp.Poly(coef + x_symb) - sp.Poly(x_symb) # TODO: slight work around since I can't initialize a constant monomial easily
+	def __init__(self, expr):
+		"""
+		@param expr: a sympy expression
+		"""
+		if isinstance(expr, int) or isinstance(expr, sp.Integer):
+			self.poly = sp.Poly(expr + x_symb) - sp.Poly(x_symb) # TODO: slight work around since I can't initialize a constant monomial easily
 		else:
-			self.poly = sp.Poly(coef*x_symb**base)
+			self.poly = sp.Poly(expr)
 
 	# Overriden operations
 	def negate(self):
-		retval = StdPoly(self.poly.coeffs()[0], self.poly.degree()) # TODO: revise when changed to standard poly
-		retval.poly = retval.poly.neg()
-		return retval
+		return StdPoly( (self.poly*-1).as_expr() ) # TODO: revise when changed to standard poly
 
 	# UTILITY FUNCTIONS
 	def coef(self): return self.poly.coeffs()[0] # TODO: remove this, temporary while refactoring takes place
 	def order(self) : return self.poly.degree()
 	def copy(self):
-		return StdPoly(self.poly.coeffs()[0], self.poly.degree()) # TODO: revise when changed to standard poly
+		return StdPoly(self.poly.as_expr()) # TODO: revise when changed to standard poly
 	def __str__(self): return str(self.poly.as_expr())
 	def __eq__(self, other): return (self.__class__ == other.__class__) and self.poly == other.poly
 	def __ne__(self, other): return not (self == other)
@@ -298,9 +298,9 @@ class StdPoly(CorePoly):
 
 	# MISC HELPERS
 	@staticmethod
-	def zero(): return StdPoly(0, Bases.CONST)
+	def zero(): return StdPoly(0)
 	@staticmethod
-	def one(): return StdPoly(1, Bases.CONST)
+	def one(): return StdPoly(1)
 	def getFractions(self): return []
 	def getNonConstTerms(self): return [self] if self.order() > 0  else []
 	def getConstTerms(self): return [self] if self.order() == 0  else []
@@ -309,7 +309,7 @@ class StdPoly(CorePoly):
 		if not self.isSameTerm(other):
 			return self.add(other)
 		else:
-			return StdPoly(self.poly.coeffs()[0] + other.poly.coeffs()[0], self.poly.degree())
+			return StdPoly( (self.poly + other.poly).as_expr() )
 
 class Eqn:
 	def __init__(self, left, right):
@@ -528,9 +528,9 @@ class Solver:
 
 		poly = sp.Poly(a*x_symb**2 + b*x_symb + d).factor()
 		if isinstance(poly, sp.Pow): # factoring was successful
-			left = SumPoly([StdPoly(poly.args[0].coeff(x_symb), Bases.X), StdPoly(sp.Poly(poly.args[0]).coeffs()[-1], Bases.CONST)])
+			left = SumPoly([StdPoly(poly.args[0].coeff(x_symb)**x_symb), StdPoly(sp.Poly(poly.args[0]).coeffs()[-1])])
 			right = left.copy()
-			return (SumPoly([ProdPoly([left, right]), StdPoly(c - d, Bases.CONST)]), True)
+			return (SumPoly([ProdPoly([left, right]), StdPoly(c - d)]), True)
 		else:
 			return (sum_poly, False)
 
@@ -551,16 +551,16 @@ class Solver:
 		poly = sp.Poly(a*x_symb**3 + b*x_symb**2 + c*x_symb + d).factor()
 		if isinstance(poly, sp.Mul): # factoring was successful
 			if len(poly.args) == 3: # factored to linear terms
-				left = SumPoly([StdPoly(poly.args[0].coeff(x_symb), Bases.X), StdPoly(sp.Poly(poly.args[0]).coeffs()[-1], Bases.CONST)])
-				middle = SumPoly([StdPoly(poly.args[1].coeff(x_symb), Bases.X), StdPoly(sp.Poly(poly.args[1]).coeffs()[-1], Bases.CONST)])
-				right = SumPoly([StdPoly(poly.args[2].coeff(x_symb), Bases.X), StdPoly(sp.Poly(poly.args[2]).coeffs()[-1], Bases.CONST)])
+				left = SumPoly([StdPoly(poly.args[0].coeff(x_symb)*x_symb), StdPoly(sp.Poly(poly.args[0]).coeffs()[-1])])
+				middle = SumPoly([StdPoly(poly.args[1].coeff(x_symb)*x_symb), StdPoly(sp.Poly(poly.args[1]).coeffs()[-1])])
+				right = SumPoly([StdPoly(poly.args[2].coeff(x_symb)*x_symb), StdPoly(sp.Poly(poly.args[2]).coeffs()[-1])])
 				return (ProdPoly([left, middle, right]), True)
 
 			else: # factored to one linear and one square term
 				linear, quad = poly.args if poly.args[0].coeff(x_symb**2) == 0 else tuple(reversed(poly.args))
-				left = SumPoly([StdPoly(linear.coeff(x_symb), Bases.X), StdPoly(sp.Poly(linear).coeffs()[-1], Bases.CONST)])
+				left = SumPoly([StdPoly(linear.coeff(x_symb)*x_symb), StdPoly(sp.Poly(linear).coeffs()[-1])])
 				# TODO: Uuuuugly, rework the line below. It looks awful
-				right = Solver._removeZeroes(SumPoly([StdPoly(quad.coeff(x_symb**2), Bases.X2), StdPoly(quad.coeff(x_symb), Bases.X), StdPoly(sp.Poly(quad).coeffs()[-1], Bases.CONST)]) )
+				right = Solver._removeZeroes(SumPoly([StdPoly(quad.coeff(x_symb**2)*x_symb**2), StdPoly(quad.coeff(x_symb)*x_symb), StdPoly(sp.Poly(quad).coeffs()[-1])]) )
 			return (ProdPoly([left, right]), True)
 		else:
 			return (sum_poly, False)
@@ -579,8 +579,8 @@ class Solver:
 
 		poly = sp.Poly(a*x_symb**2 + b*x_symb + c).factor()
 		if isinstance(poly, sp.Mul): # factoring was successful
-			left = SumPoly([StdPoly(poly.args[0].coeff(x_symb), Bases.X), StdPoly(sp.Poly(poly.args[0]).coeffs()[-1], Bases.CONST)])
-			right = SumPoly([StdPoly(poly.args[1].coeff(x_symb), Bases.X), StdPoly(sp.Poly(poly.args[1]).coeffs()[-1], Bases.CONST)])
+			left = SumPoly([StdPoly(poly.args[0].coeff(x_symb)*x_symb), StdPoly(sp.Poly(poly.args[0]).coeffs()[-1])])
+			right = SumPoly([StdPoly(poly.args[1].coeff(x_symb)*x_symb), StdPoly(sp.Poly(poly.args[1]).coeffs()[-1])])
 			return (ProdPoly([left, right]), True)
 		else:
 			return (sum_poly, False)

@@ -5,17 +5,17 @@ import pdb
 class PolyTest(unittest.TestCase):
 	def setUp(self):
 		# monomials
-		self.x_term = StdPoly(coef=1,base=Bases.X)
-		self.const = StdPoly(coef=3,base=Bases.CONST)
-		self.x2_term = StdPoly(coef=5, base=Bases.X2)
-		self.x_term2 = StdPoly(coef=2, base=Bases.X)
+		self.x_term = StdPoly(x_symb)
+		self.const = StdPoly(3)
+		self.x2_term = StdPoly(5*x_symb**2)
+		self.x_term2 = StdPoly(2*x_symb)
 
 		self.prod_poly = ProdPoly([self.x_term, self.const, self.x2_term])
 		self.new_term = self.prod_poly.divide(ProdPoly([self.x_term2, self.const]) )
 
 	def test_eq(self):
 		self.assertTrue( self.x_term == self.x_term ) 				# equal to self
-		self.assertTrue( self.x_term  == StdPoly(coef=1,base=Bases.X) )	# equal to unique copy of self
+		self.assertTrue( self.x_term  == StdPoly(x_symb) )	# equal to unique copy of self
 		self.assertFalse(self.x_term == self.const)
 
 		self.assertFalse(self.x_term == self.prod_poly)
@@ -29,16 +29,16 @@ class PolyTest(unittest.TestCase):
 		self.assertTrue(sum_poly.hasCommonTerms())
 
 		# now add the common terms, and test for equality
-		result = SumPoly([self.const, StdPoly(self.x_term.coef() + self.x_term2.coef(), self.x_term.order())])
+		result = SumPoly([self.const, StdPoly(3*x_symb)])
 		self.assertTrue(sum_poly.sumCommonTerms() == result)
 class SolverTest(unittest.TestCase):
 	def setUp(self):
 		# monomials
-		self.x_term = StdPoly(coef=1,base=Bases.X)
-		self.const = StdPoly(coef=3,base=Bases.CONST)
-		self.const2 = StdPoly(coef=1, base=Bases.CONST)
-		self.x2_term = StdPoly(coef=5, base=Bases.X2)
-		self.x_term2 = StdPoly(coef=2, base=Bases.X)
+		self.x_term = StdPoly(x_symb)
+		self.const = StdPoly(3)
+		self.const2 = StdPoly(1)
+		self.x2_term = StdPoly(5*x_symb**2)
+		self.x_term2 = StdPoly(2*x_symb)
 
 		# prod poly
 		self.prod_poly = ProdPoly([self.x_term, self.const, self.x2_term])
@@ -59,62 +59,64 @@ class SolverTest(unittest.TestCase):
 		solver = Solver(Eqn(self.x2_term, self.const2))
 		self.assertTrue(solver.win2())
 	def test_win3(self):
-		solver = Solver(Eqn(ProdPoly([self.x_term2, self.x_term2]), StdPoly(0, Bases.CONST)))
+		solver = Solver(Eqn(ProdPoly([self.x_term2, self.x_term2]), StdPoly(0)))
 		self.assertTrue(solver.win3())
 
 		# set to a higher degree poly, should be false
-		solver.eqn = Eqn(self.x2_term, StdPoly(0, Bases.CONST))
+		solver.eqn = Eqn(self.x2_term, StdPoly(0))
 		print 'is factored ' + str(solver.eqn.left.isFactored()) + str(solver.eqn.left.order())
 		self.assertFalse(solver.win3())
 	#def
+
 class SampleCasesTest(unittest.TestCase):
 	def test_solve1(self):
-		left = SumPoly([StdPoly(10, Bases.X), StdPoly(3, Bases.CONST), StdPoly(-3, Bases.CONST)])
-		right = StdPoly(10, Bases.CONST)
+		left = SumPoly([StdPoly(10*x_symb), StdPoly(3), StdPoly(-3)])
+		right = StdPoly(10)
 
 		solver = Solver(Eqn(left, right))
 		self.assertEqual(solver.solve(), '10x=10')
 	def test_solve2(self):
-		left = SumPoly([StdPoly(10, Bases.X), StdPoly(3, Bases.CONST)])
-		right = SumPoly([StdPoly(10, Bases.CONST), StdPoly(3, Bases.X)])
+		left = SumPoly([StdPoly(10*x_symb), StdPoly(3)])
+		right = SumPoly([StdPoly(10), StdPoly(3*x_symb)])
 
 		solver = Solver(Eqn(left, right))
 		self.assertEqual(solver.solve(), '7x=7')
 	def test_solve3(self):
-		left = SumPoly([StdPoly(3, Bases.X), StdPoly(1, Bases.X2)])
-		right = SumPoly([StdPoly(3, Bases.CONST), StdPoly(1, Bases.X2)])
+		left = SumPoly([StdPoly(3*x_symb), StdPoly(x_symb**2)])
+		right = SumPoly([StdPoly(3), StdPoly(x_symb**2)])
 
 		solver = Solver(Eqn(left, right))
 		self.assertEqual(solver.solve(), '3x=3')
 	def test_solve4(self):
-		sp1 = SumPoly([StdPoly(1, Bases.X), StdPoly(1, Bases.CONST)])
-		sp2 = SumPoly([StdPoly(1, Bases.X), StdPoly(3, Bases.CONST)])
+		sp1 = SumPoly([StdPoly(x_symb), StdPoly(1)])
+		sp2 = SumPoly([StdPoly(x_symb), StdPoly(3)])
 
-		num = ProdPoly([StdPoly(1, Bases.X2), sp1, sp2])
+		num = ProdPoly([StdPoly(x_symb**2), sp1, sp2])
 		denom  = ProdPoly([sp1, sp2])
 
-		left = SumPoly([RatPoly(num,denom), StdPoly(3, Bases.X)])
-		right = SumPoly([StdPoly(3, Bases.CONST), StdPoly(1, Bases.X2)])
+		left = SumPoly([RatPoly(num,denom), StdPoly(3*x_symb)])
+		right = SumPoly([StdPoly(3), StdPoly(x_symb**2)])
 
 		solver = Solver(Eqn(left, right))
 		self.assertEqual(solver.solve(), '3x + -3=0')
 
+
 class SolverRuleTest(unittest.TestCase):
 	def setUp(self):
-		self.sp1 = SumPoly([StdPoly(1, Bases.X), StdPoly(1, Bases.CONST)]) # (x + 1)
-		self.sp2 = SumPoly([StdPoly(1, Bases.X), StdPoly(3, Bases.CONST)]) # (x + 3)
-		self.sp3 = SumPoly([StdPoly(3, Bases.X), StdPoly(3, Bases.CONST)]) # (3x + 3)
-		self.sp4 = SumPoly([StdPoly(1, Bases.X2), StdPoly(4, Bases.X), StdPoly(3, Bases.CONST)]) # (x^2 + 4x + 3)
-		self.sp5 = SumPoly([StdPoly(1, Bases.X2), StdPoly(2, Bases.X), StdPoly(3, Bases.CONST)]) # (x^2 + 2x + 3) , for completing the square test
-		self.sp6 = SumPoly([StdPoly(1, Bases.X3), StdPoly(1, Bases.X2), StdPoly(-9, Bases.X), StdPoly(-9, Bases.CONST)]) # (x^3 + x^2 -9x -9 )
-		self.sp7 = SumPoly([StdPoly(1, Bases.X), StdPoly(-3, Bases.CONST)]) # (x - 3)
-		self.sp8 = SumPoly([StdPoly(1, Bases.X3), StdPoly(5, Bases.X2), StdPoly(1, Bases.X), StdPoly(5, Bases.CONST)]) # (x^3 + 5x^2 +x +5 )
-		self.sp9 = SumPoly([StdPoly(1, Bases.X), StdPoly(5, Bases.CONST)]) # (x + 3)
-		self.sp10 = SumPoly([StdPoly(1, Bases.X2), StdPoly(1, Bases.CONST)]) # (x^2 + 1)
+		self.sp1 = SumPoly([StdPoly(x_symb), StdPoly(1)]) # (x + 1)
+		self.sp2 = SumPoly([StdPoly(x_symb), StdPoly(3)]) # (x + 3)
+		self.sp3 = SumPoly([StdPoly(3*x_symb), StdPoly(3)]) # (3x + 3)
+		self.sp4 = SumPoly([StdPoly(x_symb**2), StdPoly(4*x_symb), StdPoly(3)]) # (x^2 + 4x + 3)
+		self.sp5 = SumPoly([StdPoly(x_symb**2), StdPoly(2*x_symb), StdPoly(3)]) # (x^2 + 2x + 3) , for completing the square test
+		self.sp6 = SumPoly([StdPoly(x_symb**3), StdPoly(x_symb**2), StdPoly(-9*x_symb), StdPoly(-9)]) # (x^3 + x^2 -9x -9 )
+		self.sp7 = SumPoly([StdPoly(1*x_symb), StdPoly(-3)]) # (x - 3)
+		self.sp8 = SumPoly([StdPoly(1*x_symb**3), StdPoly(5*x_symb**2), StdPoly(x_symb), StdPoly(5)]) # (x^3 + 5x^2 +x +5 )
+		self.sp9 = SumPoly([StdPoly(x_symb), StdPoly(5)]) # (x + 3)
+		self.sp10 = SumPoly([StdPoly(x_symb**2), StdPoly(1)]) # (x^2 + 1)
 		self.solver = Solver(Eqn(self.sp1, self.sp2))
 
 	def test_simp0(self):
-		rp = RatPoly(self.sp1.add(StdPoly(0, Bases.X)), self.sp2) # (x+1 + 0)
+		rp = RatPoly(self.sp1.add(StdPoly(0)), self.sp2) # (x+1 + 0)
 		self.solver.eqn = Eqn(rp, self.sp2)
 		self.assertTrue(self.solver.simp0())
 		#print "simp0 " + str(self.solver.eqn.left)
@@ -128,13 +130,13 @@ class SolverRuleTest(unittest.TestCase):
 	def test_simp2(self):
 		self.solver.eqn = Eqn(self.sp1.add(self.sp2), self.sp1)
 		self.assertTrue(self.solver.simp2())
-		self.assertEqual(self.solver.eqn.left, SumPoly([StdPoly(2, Bases.X), StdPoly(4, Bases.CONST)]) )
+		self.assertEqual(self.solver.eqn.left, SumPoly([StdPoly(2*x_symb), StdPoly(4)]) )
 	def test_simp3(self):
 		self.solver.eqn = Eqn(self.sp3, self.sp1) # (3x + 3 = x +1 )
 		self.assertTrue(self.solver.simp3())
-		left = self.sp3.add( SumPoly([StdPoly(-1, Bases.X), StdPoly(-3, Bases.CONST)]) )
-		right = self.sp1.add(SumPoly([StdPoly(-3, Bases.CONST), StdPoly(-1, Bases.X)]))
-		self.assertEqual(self.solver.eqn.left, left) # (3x + 2 - x -2 )
+		left = self.sp3.add( SumPoly([StdPoly(-1*x_symb), StdPoly(-3)]) )
+		right = self.sp1.add(SumPoly([StdPoly(-3), StdPoly(-1*x_symb)]))
+		self.assertEqual(str(self.solver.eqn.left), str(left)) # (3x + 2 - x -2 )
 		self.assertEqual(self.solver.eqn.right, right) # (x + 1 -2 -x)
 	def test_simp4(self):
 		self.solver.working_mem = WorkingMem() # ensure goal is in wm
@@ -150,7 +152,7 @@ class SolverRuleTest(unittest.TestCase):
 		rp = RatPoly(self.sp3, ProdPoly([self.sp1, self.sp3]))
 		self.solver.eqn = Eqn(rp, self.sp2)
 		self.assertTrue(self.solver.simp5())
-		self.assertEqual(self.solver.eqn.left, RatPoly(StdPoly(1, Bases.CONST), self.sp1) )
+		self.assertEqual(self.solver.eqn.left, RatPoly(StdPoly(1), self.sp1) )
 
 	def test_mult1(self):
 		rp = RatPoly(self.sp3, ProdPoly([self.sp1, self.sp3]))
@@ -161,8 +163,8 @@ class SolverRuleTest(unittest.TestCase):
 
 	def test_mult2(self):
 		sp1, sp2 = self.sp1, self.sp2
-		left = RatPoly(StdPoly(1, Bases.CONST), sp1)
-		right = RatPoly(StdPoly(1, Bases.CONST), sp2)
+		left = RatPoly(StdPoly(1), sp1)
+		right = RatPoly(StdPoly(1), sp2)
 		solver = Solver(Eqn(left, right))
 		solver.mult2()
 		# result should be...
@@ -175,7 +177,7 @@ class SolverRuleTest(unittest.TestCase):
 	def test_mult5(self):
 		self.solver.eqn = Eqn(ProdPoly([self.sp1, self.sp2]), self.sp3)
 		self.assertTrue(self.solver.mult5())
-		self.assertEqual(self.solver.eqn.left, SumPoly([ StdPoly(1, Bases.X2), StdPoly(3, Bases.X), StdPoly(1, Bases.X), StdPoly(3, Bases.CONST)]) ) # x^2 + 3x + x + 3
+		self.assertEqual(self.solver.eqn.left, SumPoly([ StdPoly(1*x_symb**2), StdPoly(3*x_symb), StdPoly(1*x_symb), StdPoly(3)]) ) # x^2 + 3x + x + 3
 
 	def test_heur1(self):
 		self.solver.eqn = Eqn(self.sp4, self.sp3)
@@ -185,7 +187,7 @@ class SolverRuleTest(unittest.TestCase):
 	def test_heur2(self):
 		self.solver.eqn = Eqn(self.sp5, self.sp3)
 		self.assertTrue(self.solver.heur2())
-		self.assertEqual(self.solver.eqn.left, SumPoly([ProdPoly([self.sp1, self.sp1]), StdPoly(2, Bases.CONST)]))
+		self.assertEqual(self.solver.eqn.left, SumPoly([ProdPoly([self.sp1, self.sp1]), StdPoly(2)]))
 
 	def test_heur3(self):
 		# factor down to linear terms
@@ -201,7 +203,7 @@ class SolverRuleTest(unittest.TestCase):
 
 class SolverUtilTest(unittest.TestCase):
 	def test_computeLCM(self):
-		m1, m2, m3 = StdPoly(1, Bases.X), StdPoly(3, Bases.CONST), StdPoly(2, Bases.CONST)
+		m1, m2, m3 = StdPoly(x_symb), StdPoly(3), StdPoly(2)
 		sp1, sp2 = SumPoly([m1, m2]), SumPoly([m1, m3])
 		solver = Solver(Eqn(sp1, sp2))
 		self.assertEqual(solver.computeLCM([sp1, sp2]), ProdPoly([sp1, sp2]))
@@ -212,3 +214,4 @@ class SolverUtilTest(unittest.TestCase):
 
 # TODO: untested code
 # mult1
+# sample test cases!
