@@ -1,7 +1,6 @@
 import pdb  # used for debugging
-
-# sympy functionality
 import sympy as sp
+
 x_symb = sp.symbols('x')
 poly = sp.Poly(3*x_symb)
 
@@ -23,7 +22,8 @@ class CorePoly(object):
 		self.is_zero = False
 		self.is_linear = self.degree() < 2
 		self.is_one = False
-	def add(self, poly) : return SumPoly([self, poly])
+    # these operations don't do any simplification
+	def addition(self, poly) : return SumPoly([self, poly])
 	def subtract(self, poly) : return SumPoly([self, poly.neg() ])
 	def mult(self, poly) : return ProdPoly([self, poly])
 	def divide(self, poly) : return RatPoly(num=self, denom=poly)
@@ -39,7 +39,6 @@ class CorePoly(object):
 	# BOOLEANS
 	def hasFractions(self): raise NotImplementedError
 	def isFactored(self): return False
-	def isLinearStdPoly(self): return False  # override for sum and monomial classes
 	def isConstTerm(self): return self.degree() == 0 # NOTE: this works for all  poly types
 
 	############################## TERMS AND FACTORS ##############################
@@ -51,12 +50,12 @@ class SumPoly(CorePoly):
 		CorePoly.__init__(self)
 
 	# OVERRIDE OPERATION POLYNOMIALS
-	def add(self, poly) :
+	def addition(self, poly) :
 		if isinstance(poly, SumPoly):
 			return SumPoly(self.subpoly + poly.subpoly)
 		else:
 			return SumPoly(self.subpoly + [poly])
-	def subtract(self, poly) : return self.add(poly.neg())
+	def subtract(self, poly) : return self.addition(poly.neg())
 	def neg(self): return SumPoly([p.neg() for p in self.subpoly])
 
 	# HELPERS
@@ -75,8 +74,7 @@ class SumPoly(CorePoly):
 
 	# BOOLEANS
 	def hasFractions(self): return any( [isinstance(p, RatPoly) for p in self.subpoly] )
-	def isLinearStdPoly(self): return all([isinstance(p, StdPoly) for p in self.subpoly]) and self.degree() < 2
-	def isFactored(self): self.degree() < 2
+	def isFactored(self): return all([p.isFactored() for p in self.subpoly])
 	def isSameTerm(self, other): return self == other
 
 	# MISC HELPERS
@@ -147,8 +145,7 @@ class ProdPoly(CorePoly):
 
 	# BOOLEANS
 	def hasFractions(self): any([ isinstance(p, RatPoly) for p in self.subpoly])
-	def isFactored(self): return max([p.degree() for p in self.subpoly]) <= 1
-	def isLinearStdPoly(self): return self.degree < 2
+	def isFactored(self): return all([p.isFactored() for p in self.subpoly])
 	def isSameTerm(self, other): return self == other
 	def haveCommonFactors(self, other): # used by RatPoly.numDenomHaveCommonFactors
 		if not isinstance(other, ProdPoly):
@@ -185,7 +182,7 @@ class ProdPoly(CorePoly):
 	############################## TERMS AND FACTORS ##############################
 	def __add__(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
 		if not self.isSameTerm(other):
-			return self.add(other)
+			return self.addition(other)
 		else:
 			return ProdPoly(self.subpoly + [StdPoly(2)])
 	def commonFactors(self): raise NotImplementedError
@@ -220,8 +217,7 @@ class RatPoly(CorePoly):
 
 	# BOOLEANS
 	def hasFractions(self): return True # true if you have or are a fraction
-	def isFactored(self): return max([self.num.degree(), self.denom.degree()]) < 2
-	def isLinearStdPoly(self): return False  # override for sum and monomial classes
+	def isFactored(self): return num.isFactored() and denom.isFactored()
 	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.denom == other.denom
 
 
@@ -232,9 +228,9 @@ class RatPoly(CorePoly):
 	############################## MISC OPERATIONS ##############################
 	def __add__(self, other):
 		if not self.isSameTerm(other):
-			return self.add(other)
+			return self.addition(other)
 		else:
-			return RatPoly(self.num.add(other.num), self.denom.copy())
+			return RatPoly(self.num + other.num, self.denom.copy())
 	def cancelNumDenom(self) : raise NotImplementedError# if num and denom have common terms cancel them, #TODO: maybe keep as a function?
 	def multReduce(self, other): raise NotImplementedError# if other occurs in denom, then cancel otherwise just multiply
 	def reciprocal(self): return RatPoly(self.denom.copy(), self.num.copy())
@@ -283,7 +279,6 @@ class StdPoly(sp.Poly, CorePoly):
 	# BOOLEANS
 	def hasFractions(self): return False
 	def isFactored(self): return self.degree() < 2
-	def isLinearStdPoly(self): return self.degree() < 2 # TODO: remove this?
 	def isConstTerm(self): return self.degree() == 0
 	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.degree() == other.degree() # TODO: revise this
 	def coeffOf(self, base): return self.coeffs()[0] if base == self.degree() else None # TODO: revise this too
@@ -297,7 +292,6 @@ class StdPoly(sp.Poly, CorePoly):
 	def getNonConstTerms(self): return [ StdPoly((self - self.all_coeffs()[-1]).as_expr() ) ] if self.degree() > 0 else []
 	def getConstTerms(self): return [ StdPoly(self.all_coeffs()[-1], x_symb) ]
 	############################## TERMS AND FACTORS ##############################
-
 class Eqn:
 	def __init__(self, left, right):
 		self.left, self.right = left, right
@@ -330,7 +324,7 @@ class Solver:
 	def win2(self):
 		""" case ax = b"""
 		right, left = self.eqn.right, self.eqn.left
-		return left.isLinearStdPoly() and right.isConstTerm() and left.coeffOf(Bases.X) == 1 and left.coeffOf(Bases.CONST) is None
+		return left.is_linear and right.isConstTerm() and left.coeffOf(Bases.X) == 1 and left.coeffOf(Bases.CONST) is None
 	def win3(self):
 		right, left = self.eqn.right, self.eqn.left
 		return ( self.eqn.degree() >= 2 and left.isFactored() and right.is_zero )
