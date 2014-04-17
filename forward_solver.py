@@ -20,13 +20,13 @@ class CorePoly(object):
 	"""basic polynomial, mostly contains code to be overridden"""
 	############################## OPERATIONS ON POLYNOMIAL (NON-REDUCED VERSIONS)  ##############################
 	def add(self, poly) : return SumPoly([self, poly])
-	def sub(self, poly) : return SumPoly([self, poly.negate() ])
+	def sub(self, poly) : return SumPoly([self, poly.neg() ])
 	def mult(self, poly) : return ProdPoly([self, poly])
 	def divide(self, poly) : return RatPoly(num=self, denom=poly)
-	def negate(self): raise NotImplementedError
+	def neg(self): raise NotImplementedError
 
 	# UTILITY FUNCTIONS
-	def order(self) : raise NotImplementedError
+	def degree(self) : raise NotImplementedError
 	def copy(self): raise NotImplementedError
 	def __str__(self): raise NotImplementedError
 	def __eq__(self, other): raise NotImplementedError
@@ -38,7 +38,7 @@ class CorePoly(object):
 	def isZero(self): return False
 	def isOne(self): return False
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
-	def isConstTerm(self): return self.order() == 0 # NOTE: this works for all  poly types
+	def isConstTerm(self): return self.degree() == 0 # NOTE: this works for all  poly types
 
 	############################## TERMS AND FACTORS ##############################
 	def isConstantTerm(self): return False
@@ -52,11 +52,11 @@ class SumPoly(CorePoly):
 			return SumPoly(self.subpoly + poly.subpoly)
 		else:
 			return SumPoly(self.subpoly + [poly])
-	def sub(self, poly) : return self.add(poly.negate())
-	def negate(self): return SumPoly([p.negate() for p in self.subpoly])
+	def sub(self, poly) : return self.add(poly.neg())
+	def neg(self): return SumPoly([p.neg() for p in self.subpoly])
 
 	# HELPERS
-	def order(self) : return max([p.order() for p in self.subpoly])
+	def degree(self) : return max([p.degree() for p in self.subpoly])
 	def copy(self): return SumPoly( [p.copy() for p in self.subpoly] )
 	def __str__(self): return  ' + '.join([str(p) for p in self.subpoly])
 
@@ -71,8 +71,8 @@ class SumPoly(CorePoly):
 
 	# BOOLEANS
 	def hasFractions(self): return any( [isinstance(p, RatPoly) for p in self.subpoly] )
-	def isLinearStdPoly(self): return all([isinstance(p, StdPoly) for p in self.subpoly]) and self.order() < 2
-	def isFactored(self): self.order() < 2
+	def isLinearStdPoly(self): return all([isinstance(p, StdPoly) for p in self.subpoly]) and self.degree() < 2
+	def isFactored(self): self.degree() < 2
 	def isSameTerm(self, other): return self == other
 
 	# MISC HELPERS
@@ -80,15 +80,15 @@ class SumPoly(CorePoly):
 	def coeffOf(self, base): # TODO: assumes only one monomial of each base type exists
 		# only returns the first subpoly of that base
 		for p in self.subpoly:
-			if isinstance(p, StdPoly) and p.order() == base:
+			if isinstance(p, StdPoly) and p.degree() == base:
 				return p.coef()
 		return None
 
 	############################## terms and factors ##############################
 	# TODO: implement all of these
-	def sumSameTerm(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
+	def __add__(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
 		return sumCommonTerms(SumPoly(self.subpoly + other.subpoly))
-	def isConstantTerm(self): return self.order() == 0
+	def isConstantTerm(self): return self.degree() == 0
 	def getNonConstTerms(self): return mergeLists([ p.getNonConstTerms() for p in self.subpoly if isinstance(p, StdPoly)])
 	def getConstTerms(self): return mergeLists([ p.getConstTerms() for p in self.subpoly if isinstance(p, StdPoly)])
 	def distribute(multiplier): return SumPoly( [p.mult(multiplier) for p in self.subpoly] )
@@ -106,7 +106,7 @@ class SumPoly(CorePoly):
 		condensed = [] # common terms after being added together
 		while len(ls) > 0:
 			# in each pass, grab all subpoly that have sameTerms and add them
-			result = reduce(lambda x,y: x.sumSameTerm(y), filter(lambda x: ls[0].isSameTerm(x), ls) )
+			result = reduce(lambda x,y: x + y, filter(lambda x: ls[0].isSameTerm(x), ls) )
 			condensed.append(result)
 			ls = filter(lambda x: not ls[0].isSameTerm(x), ls)
 
@@ -124,10 +124,10 @@ class ProdPoly(CorePoly):
 			return ProdPoly(self.subpoly + [poly])
 
 	# TODO: should we make copies here?
-	def negate(self): return ProdPoly( [self.subpoly[0].negate()] + self.subpoly[1:] )
+	def neg(self): return ProdPoly( [self.subpoly[0].neg()] + self.subpoly[1:] )
 
 	# UTILITY FUNCTIONS
-	def order(self) : return sum([p.order() for p in self.subpoly])
+	def degree(self) : return sum([p.degree() for p in self.subpoly])
 	def copy(self): return ProdPoly([p.copy() for p in self.subpoly])
 	def __str__(self): return ' * '.join(['('+str(p) +')' for p in self.subpoly])
 	def __eq__(self, other):
@@ -141,8 +141,8 @@ class ProdPoly(CorePoly):
 
 	# BOOLEANS
 	def hasFractions(self): any([ isinstance(p, RatPoly) for p in self.subpoly])
-	def isFactored(self): return max([p.order() for p in self.subpoly]) <= 1
-	def isLinearStdPoly(self): return self.order < 2
+	def isFactored(self): return max([p.degree() for p in self.subpoly]) <= 1
+	def isLinearStdPoly(self): return self.degree < 2
 	def isSameTerm(self, other): return self == other
 	def haveCommonFactors(self, other): # used by RatPoly.numDenomHaveCommonFactors
 		if not isinstance(other, ProdPoly):
@@ -177,7 +177,7 @@ class ProdPoly(CorePoly):
 	def getNonConstTerms(self): return [p for p in self.subpoly if not p.isConstTerm()]
 	def getConstTerms(self): return [p for p in self.subpoly if p.isConstTerm()]
 	############################## TERMS AND FACTORS ##############################
-	def sumSameTerm(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
+	def __add__(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
 		if not self.isSameTerm(other):
 			return self.add(other)
 		else:
@@ -198,10 +198,10 @@ class RatPoly(CorePoly):
 		else:
 			return ProdPoly([self, other])
 	def divide(self, other): return RatPoly(self.num, self.denom.mult(other))
-	def negate(self): return RatPoly(self.num.negate(), self.denom)
+	def neg(self): return RatPoly(self.num.neg(), self.denom)
 
 	# UTILITY FUNCTIONS
-	def order(self) : return max([self.num.order(), self.denom.order()])
+	def degree(self) : return max([self.num.degree(), self.denom.degree()])
 	def copy(self) : return RatPoly(self.num.copy(), self.denom.copy())
 	def __str__(self): return '(' + str(self.num) + ')/(' + str(self.denom) + ')'
 	def __eq__(self, other):
@@ -212,7 +212,7 @@ class RatPoly(CorePoly):
 
 	# BOOLEANS
 	def hasFractions(self): return True # true if you have or are a fraction
-	def isFactored(self): return max([self.num.order(), self.denom.order()]) < 2
+	def isFactored(self): return max([self.num.degree(), self.denom.degree()]) < 2
 	def isZero(self): return self.num.isZero()
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
 	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.denom == other.denom
@@ -223,7 +223,7 @@ class RatPoly(CorePoly):
 	def getNonConstTerms(self): return [self]
 	def getConstTerms(self): return [] # TODO: change this, in case of const fraction?
 	############################## MISC OPERATIONS ##############################
-	def sumSameTerm(self, other):
+	def __add__(self, other):
 		if not self.isSameTerm(other):
 			return self.add(other)
 		else:
@@ -276,12 +276,12 @@ class StdPoly(CorePoly):
 			self.poly = sp.Poly(expr)
 
 	# Overriden operations
-	def negate(self):
+	def neg(self):
 		return StdPoly( (self.poly*-1).as_expr() ) # TODO: revise when changed to standard poly
 
 	# UTILITY FUNCTIONS
 	def coef(self): return self.poly.coeffs()[0] # TODO: remove this, temporary while refactoring takes place
-	def order(self) : return self.poly.degree()
+	def degree(self) : return self.poly.degree()
 	def copy(self):
 		return StdPoly(self.poly.as_expr()) # TODO: revise when changed to standard poly
 	def __str__(self): return str(self.poly.as_expr())
@@ -294,7 +294,7 @@ class StdPoly(CorePoly):
 	def isZero(self): return self.poly.is_zero
 	def isOne(self): return self.poly.coeffs()[0] == 1 and self.poly.degree() == 0
 	def isLinearStdPoly(self): return True
-	def isConstTerm(self): return self.order() == 0
+	def isConstTerm(self): return self.degree() == 0
 	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.poly.degree() == other.poly.degree()
 	def coeffOf(self, base): return self.poly.coeffs()[0] if base == self.poly.degree() else None
 
@@ -304,10 +304,10 @@ class StdPoly(CorePoly):
 	@staticmethod
 	def one(): return StdPoly(1)
 	def getFractions(self): return []
-	def getNonConstTerms(self): return [ StdPoly((self.poly - self.poly.all_coeffs()[-1]).as_expr() ) ] if self.order() > 0 else []
+	def getNonConstTerms(self): return [ StdPoly((self.poly - self.poly.all_coeffs()[-1]).as_expr() ) ] if self.degree() > 0 else []
 	def getConstTerms(self): return [ StdPoly(self.poly.all_coeffs()[-1]) ]
 	############################## TERMS AND FACTORS ##############################
-	def sumSameTerm(self, other):
+	def __add__(self, other):
 		if not self.isSameTerm(other):
 			return self.add(other)
 		else:
@@ -319,7 +319,7 @@ class Eqn:
 	def __str__(self):
 		return str(self.left) + '=' + str(self.right)
 	def copy(self): return Eqn(self.left.copy(), self.right.copy())
-	def order(self): return max([self.left.order(), self.right.order()])
+	def degree(self): return max([self.left.degree(), self.right.degree()])
 
 class WorkingMem:
 	SET_RHS_ZERO = 'set rhs zero'
@@ -349,7 +349,7 @@ class Solver:
 		return left.isLinearStdPoly() and right.isConstTerm() and left.coeffOf(Bases.X) != 1 and left.coeffOf(Bases.CONST) is None
 	def win3(self):
 		right, left = self.eqn.right, self.eqn.left
-		return ( self.eqn.order() >= 2 and left.isFactored() and right.isZero() )
+		return ( self.eqn.degree() >= 2 and left.isFactored() and right.isZero() )
 
 	############################## rules ##############################
 	# structure of recursive rules:
@@ -391,8 +391,8 @@ class Solver:
 		return self.checkEqnForRule(cond, action)
 
 	def simp1(self):
-		""" set working mem goal, if order is >= 2 """
-		if self.eqn.order() >= 2 and not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
+		""" set working mem goal, if degree is >= 2 """
+		if self.eqn.degree() >= 2 and not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
 			self.working_mem.addGoal(WorkingMem.SET_RHS_ZERO)
 			return True
 		return False
@@ -495,7 +495,7 @@ class Solver:
 
 	def heur3(self):
 		""" attempt to factor a polynomial of degree  == 3 """
-		cond = lambda p: p.order() == 3 and isinstance(p, StdPoly) and Solver.factorCubic(p)[1]
+		cond = lambda p: p.degree() == 3 and isinstance(p, StdPoly) and Solver.factorCubic(p)[1]
 		action = lambda p : Solver.factorCubic(p)[0]
 		return self.checkEqnForRule(cond, action)
 
