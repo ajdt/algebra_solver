@@ -1,4 +1,4 @@
-import pdb # used for debugging
+import pdb  # used for debugging
 
 # sympy functionality
 import sympy as sp
@@ -19,6 +19,10 @@ def mergeLists(list_of_lists):
 class CorePoly(object):
 	"""basic polynomial, mostly contains code to be overridden"""
 	############################## OPERATIONS ON POLYNOMIAL (NON-REDUCED VERSIONS)  ##############################
+	def __init__(self):
+		self.is_zero = False
+		self.is_linear = self.degree() < 2
+		self.is_one = False
 	def add(self, poly) : return SumPoly([self, poly])
 	def sub(self, poly) : return SumPoly([self, poly.neg() ])
 	def mult(self, poly) : return ProdPoly([self, poly])
@@ -35,8 +39,6 @@ class CorePoly(object):
 	# BOOLEANS
 	def hasFractions(self): raise NotImplementedError
 	def isFactored(self): return False
-	def isZero(self): return False
-	def isOne(self): return False
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
 	def isConstTerm(self): return self.degree() == 0 # NOTE: this works for all  poly types
 
@@ -44,7 +46,9 @@ class CorePoly(object):
 	def isConstantTerm(self): return False
 
 class SumPoly(CorePoly):
-	def __init__(self, poly_list): self.subpoly = poly_list
+	def __init__(self, poly_list):
+		self.subpoly = poly_list
+		CorePoly.__init__(self)
 
 	# OVERRIDE OPERATION POLYNOMIALS
 	def add(self, poly) :
@@ -114,7 +118,9 @@ class SumPoly(CorePoly):
 		return simplifyPolyTerms(condensed, StdPoly.zero(), SumPoly)
 
 class ProdPoly(CorePoly):
-	def __init__(self, poly_list): self.subpoly = poly_list
+	def __init__(self, poly_list):
+		self.subpoly = poly_list
+		CorePoly.__init__(self)
 
 	# OVERRIDE MATH OPERATIONS
 	def mult(self,poly):
@@ -190,7 +196,9 @@ class ProdPoly(CorePoly):
 		return simplifyPolyTerms(new_subpoly, StdPoly.one(), ProdPoly)
 
 class RatPoly(CorePoly):
-	def __init__(self, num, denom): self.num, self.denom = num, denom
+	def __init__(self, num, denom):
+		self.num, self.denom = num, denom
+		CorePoly.__init__(self)
 	############################## OPERATIONS ON POLYNOMIAL (NON-REDUCED VERSIONS)  ##############################
 	def mult(self, other) :
 		if isinstance(other, RatPoly):
@@ -213,7 +221,6 @@ class RatPoly(CorePoly):
 	# BOOLEANS
 	def hasFractions(self): return True # true if you have or are a fraction
 	def isFactored(self): return max([self.num.degree(), self.denom.degree()]) < 2
-	def isZero(self): return self.num.isZero()
 	def isLinearStdPoly(self): return False  # override for sum and monomial classes
 	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.denom == other.denom
 
@@ -247,7 +254,7 @@ class RatPoly(CorePoly):
 			common = [p for p in self.num.subpoly if p in self.denom.subpoly]
 			new_num = self.num.cancelFactors(common)
 			new_denom = self.denom.cancelFactors(common)
-			if new_denom.isOne():
+			if new_denom.is_one:
 				return new_num
 			else:
 				return RatPoly(new_num, new_denom) # handle more cases here
@@ -274,6 +281,12 @@ class StdPoly(CorePoly):
 			self.poly = sp.Poly(expr + x_symb) - sp.Poly(x_symb) # TODO: slight work around since I can't initialize a constant monomial easily
 		else:
 			self.poly = sp.Poly(expr)
+
+		# NOTE: these fields have been added in preparation for replacing
+		# StdPoly with sp.Poly
+		self.is_zero = self.poly.is_zero
+		self.is_linear = self.poly.is_linear
+		self.is_one = self.poly.is_one
 
 	# Overriden operations
 	def neg(self):
@@ -349,7 +362,7 @@ class Solver:
 		return left.isLinearStdPoly() and right.isConstTerm() and left.coeffOf(Bases.X) != 1 and left.coeffOf(Bases.CONST) is None
 	def win3(self):
 		right, left = self.eqn.right, self.eqn.left
-		return ( self.eqn.degree() >= 2 and left.isFactored() and right.isZero() )
+		return ( self.eqn.degree() >= 2 and left.isFactored() and right.is_zero )
 
 	############################## rules ##############################
 	# structure of recursive rules:
@@ -381,12 +394,12 @@ class Solver:
 
 	@staticmethod
 	def _removeZeroes(sum_poly):
-		no_zeroes = [p for p in sum_poly.subpoly if not p.isZero() ]
+		no_zeroes = [p for p in sum_poly.subpoly if not p.is_zero ]
 		return simplifyPolyTerms(no_zeroes, StdPoly.zero(), SumPoly)
 
 	def simp0(self):
 		""" if sumpoly has zeroes remove them """
-		cond	= lambda x : isinstance(x, SumPoly) and any([p.isZero() for p in x.subpoly])
+		cond	= lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in x.subpoly])
 		action	= Solver._removeZeroes
 		return self.checkEqnForRule(cond, action)
 
@@ -420,7 +433,7 @@ class Solver:
 
 	def simp4(self):
 		""" if equation is higher than 1st degree set rhs to zero"""
-		if self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not self.eqn.right.isZero():
+		if self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not self.eqn.right.is_zero:
 			self.eqn.left = self.eqn.left.sub(self.eqn.right)
 			self.eqn.right = self.eqn.right.sub(self.eqn.right)
 			return True
