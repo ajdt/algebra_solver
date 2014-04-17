@@ -24,7 +24,7 @@ class CorePoly(object):
 		self.is_linear = self.degree() < 2
 		self.is_one = False
 	def add(self, poly) : return SumPoly([self, poly])
-	def sub(self, poly) : return SumPoly([self, poly.neg() ])
+	def subtract(self, poly) : return SumPoly([self, poly.neg() ])
 	def mult(self, poly) : return ProdPoly([self, poly])
 	def divide(self, poly) : return RatPoly(num=self, denom=poly)
 	def neg(self): raise NotImplementedError
@@ -56,7 +56,7 @@ class SumPoly(CorePoly):
 			return SumPoly(self.subpoly + poly.subpoly)
 		else:
 			return SumPoly(self.subpoly + [poly])
-	def sub(self, poly) : return self.add(poly.neg())
+	def subtract(self, poly) : return self.add(poly.neg())
 	def neg(self): return SumPoly([p.neg() for p in self.subpoly])
 
 	# HELPERS
@@ -172,7 +172,7 @@ class ProdPoly(CorePoly):
 		for p in terms1:
 			for q in terms2:
 				if isinstance(p, StdPoly) and isinstance(p, StdPoly):
-					new_terms.append(StdPoly( (p.poly * q.poly).as_expr() ))
+					new_terms.append(p * q)
 				else:
 					new_terms.append(p.mult(q))
 
@@ -272,59 +272,31 @@ class Bases: # used as an enum
 	CONST, X, X2, X3 = range(4)
 
 
-class StdPoly(CorePoly):
-	def __init__(self, expr):
-		"""
-		@param expr: a sympy expression
-		"""
-		if isinstance(expr, int) or isinstance(expr, sp.Integer):
-			self.poly = sp.Poly(expr + x_symb) - sp.Poly(x_symb) # TODO: slight work around since I can't initialize a constant monomial easily
-		else:
-			self.poly = sp.Poly(expr)
-
-		# NOTE: these fields have been added in preparation for replacing
-		# StdPoly with sp.Poly
-		self.is_zero = self.poly.is_zero
-		self.is_linear = self.poly.is_linear
-		self.is_one = self.poly.is_one
-
-	# Overriden operations
-	def neg(self):
-		return StdPoly( (self.poly*-1).as_expr() ) # TODO: revise when changed to standard poly
+class StdPoly(sp.Poly, CorePoly):
+	def __init__(self, *args):
+		sp.Poly.__init__(self, *args)
 
 	# UTILITY FUNCTIONS
-	def coef(self): return self.poly.coeffs()[0] # TODO: remove this, temporary while refactoring takes place
-	def degree(self) : return self.poly.degree()
-	def copy(self):
-		return StdPoly(self.poly.as_expr()) # TODO: revise when changed to standard poly
-	def __str__(self): return str(self.poly.as_expr())
-	def __eq__(self, other): return (self.__class__ == other.__class__) and self.poly == other.poly
-	def __ne__(self, other): return not (self == other)
+	def coef(self): return self.coeffs()[0] # TODO: remove this, temporary while refactoring takes place
+	def __str__(self): return str(self.as_expr()) # don't like how sp.Poly prints polynomials
 
 	# BOOLEANS
 	def hasFractions(self): return False
-	def isFactored(self): return self.poly.degree() < 2
-	def isZero(self): return self.poly.is_zero
-	def isOne(self): return self.poly.coeffs()[0] == 1 and self.poly.degree() == 0
-	def isLinearStdPoly(self): return True
+	def isFactored(self): return self.degree() < 2
+	def isLinearStdPoly(self): return self.degree() < 2 # TODO: remove this?
 	def isConstTerm(self): return self.degree() == 0
-	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.poly.degree() == other.poly.degree()
-	def coeffOf(self, base): return self.poly.coeffs()[0] if base == self.poly.degree() else None
+	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.degree() == other.degree() # TODO: revise this
+	def coeffOf(self, base): return self.coeffs()[0] if base == self.degree() else None # TODO: revise this too
 
 	# MISC HELPERS
 	@staticmethod
-	def zero(): return StdPoly(0)
+	def zero(): return StdPoly(0, x_symb)
 	@staticmethod
-	def one(): return StdPoly(1)
-	def getFractions(self): return []
-	def getNonConstTerms(self): return [ StdPoly((self.poly - self.poly.all_coeffs()[-1]).as_expr() ) ] if self.degree() > 0 else []
-	def getConstTerms(self): return [ StdPoly(self.poly.all_coeffs()[-1]) ]
+	def one(): return StdPoly(1, x_symb)
+	def getFractions(self): return [] # TODO: try to remove this
+	def getNonConstTerms(self): return [ StdPoly((self - self.all_coeffs()[-1]).as_expr() ) ] if self.degree() > 0 else []
+	def getConstTerms(self): return [ StdPoly(self.all_coeffs()[-1], x_symb) ]
 	############################## TERMS AND FACTORS ##############################
-	def __add__(self, other):
-		if not self.isSameTerm(other):
-			return self.add(other)
-		else:
-			return StdPoly( (self.poly + other.poly).as_expr() )
 
 class Eqn:
 	def __init__(self, left, right):
@@ -357,9 +329,8 @@ class Solver:
 		return (left.isConstTerm() and right.isConstTerm() and left != right)
 	def win2(self):
 		""" case ax = b"""
-		# TODO: break this up into another rule
 		right, left = self.eqn.right, self.eqn.left
-		return left.isLinearStdPoly() and right.isConstTerm() and left.coeffOf(Bases.X) != 1 and left.coeffOf(Bases.CONST) is None
+		return left.isLinearStdPoly() and right.isConstTerm() and left.coeffOf(Bases.X) == 1 and left.coeffOf(Bases.CONST) is None
 	def win3(self):
 		right, left = self.eqn.right, self.eqn.left
 		return ( self.eqn.degree() >= 2 and left.isFactored() and right.is_zero )
@@ -427,15 +398,15 @@ class Solver:
 			else:
 				remove_poly =  simplifyPolyTerms(to_remove, StdPoly.zero(), SumPoly)
 			# subtract the terms from both sides
-			self.eqn.left, self.eqn.right  = self.eqn.left.sub(remove_poly), self.eqn.right.sub(remove_poly)
+			self.eqn.left, self.eqn.right  = self.eqn.left.subtract(remove_poly), self.eqn.right.subtract(remove_poly)
 			return True
 		return False
 
 	def simp4(self):
 		""" if equation is higher than 1st degree set rhs to zero"""
 		if self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not self.eqn.right.is_zero:
-			self.eqn.left = self.eqn.left.sub(self.eqn.right)
-			self.eqn.right = self.eqn.right.sub(self.eqn.right)
+			self.eqn.left = self.eqn.left.subtract(self.eqn.right)
+			self.eqn.right = self.eqn.right.subtract(self.eqn.right)
 			return True
 		return False
 
@@ -496,13 +467,13 @@ class Solver:
 	def heur1(self):
 		""" attempt to factor a polynomial of degree  == 2 """
 		# TODO: fix this to handle SumPoly's also!!
-		cond = lambda p:  isinstance(p, StdPoly) and p.poly.is_quadratic and isinstance(p.poly.factor(), sp.Mul) # TODO: look for is_factorable() method
+		cond = lambda p:  isinstance(p, StdPoly) and p.is_quadratic and isinstance(p.factor(), sp.Mul) # TODO: look for is_factorable() method
 		action = lambda p : Solver.factor(p)[0]
 		return self.checkEqnForRule(cond, action)
 
 	def heur2(self):
 		""" factor by completing the square """
-		cond = lambda p: isinstance(p, StdPoly) and p.poly.is_quadratic and Solver.completeSquare(p)[1]
+		cond = lambda p: isinstance(p, StdPoly) and p.is_quadratic and Solver.completeSquare(p)[1]
 		action = lambda p : Solver.completeSquare(p)[0]
 		return self.checkEqnForRule(cond, action)
 
@@ -539,12 +510,12 @@ class Solver:
 		if not isinstance(std_poly, StdPoly):
 			raise TypeError
 		# TODO: for now assumes a = 1, to avoid fractions
-		d = std_poly.poly.all_coeffs()[-2]**2/4 # take coeff attached to x term
-		c = std_poly.poly.all_coeffs()[-1]
-		poly = (std_poly.poly - c + d).factor()
+		d = std_poly.all_coeffs()[-2]**2/4 # take coeff attached to x term
+		c = std_poly.all_coeffs()[-1]
+		poly = (std_poly - c + d).factor()
 		if isinstance(poly, sp.Pow): # factoring was successful
 			factor = StdPoly(poly.args[0])
-			return (SumPoly([ProdPoly([factor, factor.copy()]), StdPoly(c - d)]), True)
+			return (SumPoly([ProdPoly([factor, factor.copy()]), StdPoly(c - d, x_symb)]), True)
 		else:
 			return (std_poly, False)
 
@@ -559,9 +530,8 @@ class Solver:
 		"""
 		if not isinstance(std_poly, StdPoly):
 			raise TypeError
-		# TODO: switch to using sympy in the future
 
-		poly = std_poly.poly.factor()
+		poly = std_poly.factor()
 		if isinstance(poly, sp.Mul): # factoring was successful
 			return (ProdPoly([StdPoly(p) for p in poly.args]), True)
 		else:
@@ -578,7 +548,7 @@ class Solver:
 		if not isinstance(std_poly, StdPoly):
 			raise TypeError
 
-		poly = std_poly.poly.factor()
+		poly = std_poly.factor()
 		if isinstance(poly, sp.Mul): # factoring was successful
 			return (ProdPoly([ StdPoly(p) for p in poly.args ]), True)
 		else:
