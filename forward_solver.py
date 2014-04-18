@@ -513,8 +513,6 @@ class Solver:
 		else:
 			return (std_poly, False)
 
-
-
 	@staticmethod
 	def factorCubic(std_poly):
 		"""
@@ -560,7 +558,7 @@ class Solver:
 	def solve(self):
 		"""solve the equation given"""
 		while not self.checkWinCond():
-			#print str(self.eqn)
+			print str(self.eqn)
 			if self.checkRuleSet(self.SIMP_RULES):
 				continue
 			elif self.checkRuleSet(self.MULT_RULES):
@@ -574,7 +572,7 @@ class Solver:
 				#print "no rules apply"
 				#print str(self.eqn)
 				return str(self.eqn)
-		#print str(self.eqn)
+		print str(self.eqn)
 		return str(self.eqn)
 
 	def checkWinCond(self):
@@ -590,9 +588,16 @@ class Solver:
 		""" check an argument ruleset"""
 		for rule in ruleset:
 			if rule(self) :
-				#print 'applied: ' + rule.__name__
+				print rule.__doc__
 				return True
 		return False
 
 # Notes:
 #	all/any for reducing a list of booleans
+
+# certifier for trace on a solution
+# enumerate all valid traces
+# test traces
+# borrow ideas from drools  jess
+# quick check
+# model checker?

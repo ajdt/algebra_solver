@@ -68,8 +68,8 @@ class SolverTest(unittest.TestCase):
 		solver.eqn = Eqn(self.x2_term, StdPoly(0, x_symb))
 		self.assertFalse(solver.win3())
 
-"""
 class SampleCasesTest(unittest.TestCase):
+	"""
 	def test_solve1(self):
 		left = SumPoly([StdPoly(10*x_symb + 3), StdPoly(-3)])
 		right = StdPoly(10)
@@ -82,12 +82,14 @@ class SampleCasesTest(unittest.TestCase):
 
 		solver = Solver(Eqn(left, right))
 		self.assertEqual(solver.solve(), '7x=7')
+		"""
 	def test_solve3(self):
 		left = StdPoly(3*x_symb + x_symb**2)
 		right = StdPoly(3 + x_symb**2)
 
 		solver = Solver(Eqn(left, right))
 		self.assertEqual(solver.solve(), '3*x=3')
+	"""
 	def test_solve4(self):
 		sp1 = StdPoly(x_symb + 1)
 		sp2 = StdPoly(x_symb + 3)
@@ -100,8 +102,8 @@ class SampleCasesTest(unittest.TestCase):
 
 		solver = Solver(Eqn(left, right))
 		self.assertEqual(solver.solve(), '3x + -3=0')
+		"""
 
-"""
 
 class SolverRuleTest(unittest.TestCase):
 	def setUp(self):
