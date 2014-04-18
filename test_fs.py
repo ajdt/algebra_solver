@@ -88,8 +88,11 @@ class SampleCasesTest(unittest.TestCase):
 		right = StdPoly(3 + x_symb**2)
 
 		solver = Solver(Eqn(left, right))
-		self.assertEqual(solver.solve(), '3*x=3')
-	"""
+		expected_steps = 	[	'x**2 + 3*x=x**2 + 3:initial state',
+								'x**2 + 3*x=x**2 + 3: set working mem goal, if degree is >= 2 '
+							] 
+		self.assertEqual(solver.solve(), expected_steps)
+
 	def test_solve4(self):
 		sp1 = StdPoly(x_symb + 1)
 		sp2 = StdPoly(x_symb + 3)
@@ -101,8 +104,11 @@ class SampleCasesTest(unittest.TestCase):
 		right = StdPoly(3 + x_symb**2)
 
 		solver = Solver(Eqn(left, right))
-		self.assertEqual(solver.solve(), '3x + -3=0')
-		"""
+		expected_steps = 	[	'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x=x**2 + 3:initial state', 
+								'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x=x**2 + 3: set working mem goal, if degree is >= 2 '
+							]
+		self.assertEqual(solver.solve(), expected_steps)
+		self.assertEqual(str(solver.eqn), '3x + -3=0')
 
 
 class SolverRuleTest(unittest.TestCase):

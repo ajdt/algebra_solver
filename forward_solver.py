@@ -217,7 +217,7 @@ class RatPoly(CorePoly):
 
 	# BOOLEANS
 	def hasFractions(self): return True # true if you have or are a fraction
-	def isFactored(self): return num.isFactored() and denom.isFactored()
+	def isFactored(self): return self.num.isFactored() and self.denom.isFactored()
 	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.denom == other.denom
 
 
@@ -313,6 +313,7 @@ class WorkingMem:
 	def btpeek(self): return self.backtrack_stack[-1]
 	def btpop(self) : return self.backtrack_stack.pop()
 	def btpush(self, eqn) : return self.backtrack_stack.append(eqn)
+	def addStep(self, step): self.steps.append(step)
 
 class Solver:
 	def __init__(self, eqn): self.eqn, self.working_mem	 = eqn, WorkingMem()
@@ -553,27 +554,25 @@ class Solver:
 	MULT_RULES		= [mult1, mult2]
 	MISC_RULES		= []
 	HEURISTICS		= []
+	ALL_RULES 		= [SIMP_RULES, WIN_RULES, MULT_RULES, MISC_RULES, HEURISTICS]
 
 	## solve the problem
 	def solve(self):
-		"""solve the equation given"""
+		"""solve the equation given, return steps to the solution"""
+		self.working_mem.addStep( str(self.eqn) + ":" + "initial state" )
 		while not self.checkWinCond():
-			print str(self.eqn)
-			if self.checkRuleSet(self.SIMP_RULES):
-				continue
-			elif self.checkRuleSet(self.MULT_RULES):
-				continue
-			elif self.checkRuleSet(self.MISC_RULES):
-				continue
-			elif self.checkRuleSet(self.HEURISTICS):
-				continue
-			else:
-				# TODO: change this later
-				#print "no rules apply"
-				#print str(self.eqn)
-				return str(self.eqn)
-		print str(self.eqn)
-		return str(self.eqn)
+			#print str(self.eqn)
+			for ruleset in self.ALL_RULES :
+				applied_rule = self.checkRuleSet(ruleset)
+				if applied_rule is not None:
+					self.working_mem.addStep(str(self.eqn) + ":" + applied_rule.__doc__) # str indicating what rule was used
+					break
+			print " no rules apply "
+			break
+		# print solution and then return it
+		for p in self.working_mem.steps :
+			print p
+		return self.working_mem.steps
 
 	def checkWinCond(self):
 		""" check win conditions """
@@ -588,9 +587,9 @@ class Solver:
 		""" check an argument ruleset"""
 		for rule in ruleset:
 			if rule(self) :
-				print rule.__doc__
-				return True
-		return False
+				#print rule.__doc__
+				return rule
+		return None
 
 # Notes:
 #	all/any for reducing a list of booleans
@@ -600,4 +599,6 @@ class Solver:
 # test traces
 # borrow ideas from drools  jess
 # quick check
-# model checker?
+# use model checker?
+# cmbc
+# strict hierarchy, or limit to tree depth
