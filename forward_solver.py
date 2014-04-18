@@ -562,13 +562,15 @@ class Solver:
 		self.working_mem.addStep( str(self.eqn) + ":" + "initial state" )
 		while not self.checkWinCond():
 			#print str(self.eqn)
+			applied_rule = None
 			for ruleset in self.ALL_RULES :
 				applied_rule = self.checkRuleSet(ruleset)
 				if applied_rule is not None:
 					self.working_mem.addStep(str(self.eqn) + ":" + applied_rule.__doc__) # str indicating what rule was used
 					break
-			print " no rules apply "
-			break
+			if applied_rule is None:
+				print " no rules applied "
+				break
 		# print solution and then return it
 		for p in self.working_mem.steps :
 			print p
