@@ -88,10 +88,12 @@ class SampleCasesTest(unittest.TestCase):
 		right = StdPoly(3 + x_symb**2)
 
 		solver = Solver(Eqn(left, right))
-		expected_steps = 	[	'x**2 + 3*x=x**2 + 3:initial state',
-								'x**2 + 3*x=x**2 + 3: set working mem goal, if degree is >= 2 '
-							] 
-		pdb.set_trace()
+		expected_steps = 	['x**2 + 3*x=x**2 + 3:initial state',
+												'x**2 + 3*x=x**2 + 3:simp1',
+												'x**2 + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3:simp4',
+												'3*x - 3=x**2 + 3 + -x**2 - 3:simp2',
+												'3*x - 3=0:simp2']
+		#pdb.set_trace()
 		self.assertEqual(solver.solve(), expected_steps)
 
 	def test_solve4(self):
@@ -105,15 +107,14 @@ class SampleCasesTest(unittest.TestCase):
 		right = StdPoly(3 + x_symb**2)
 
 		solver = Solver(Eqn(left, right))
-		expected_steps = 	[	'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x=x**2 + 3:initial state', 
-								'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x=x**2 + 3: set working mem goal, if degree is >= 2 '
-								'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3: if equation is higher than 1st degree set rhs to zero',
-								'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=0: if sum poly has common terms, then add them together ',
-								'x**2 + 3*x + -x**2 - 3=0: if num and denom of a rational polynomial have common factors, remove them',
-								'-3 + 3*x=0: if sum poly has common terms, then add them together '
-							]
+		expected_steps =	[	'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x=x**2 + 3:initial state',
+												'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x=x**2 + 3:simp1',
+												'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3:simp4',
+												'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=0:simp2',
+												'x**2 + 3*x + -x**2 - 3=0:simp5',
+												'-3 + 3*x=0:simp2']
 		self.assertEqual(solver.solve(), expected_steps)
-		self.assertEqual(str(solver.eqn), '3x + -3=0')
+		self.assertEqual(str(solver.eqn), '-3 + 3*x=0')
 
 
 class SolverRuleTest(unittest.TestCase):

@@ -568,7 +568,7 @@ class Solver:
 			for ruleset in self.ALL_RULES :
 				applied_rule = self.checkRuleSet(ruleset)
 				if applied_rule is not None:
-					self.working_mem.addStep(str(self.eqn) + ":" + applied_rule.__doc__) # str indicating what rule was used
+					self.working_mem.addStep(str(self.eqn) + ":" + applied_rule.__name__) # str indicating what rule was used
 					break
 			if applied_rule is None:
 				print " no rules applied "
