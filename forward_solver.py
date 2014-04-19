@@ -320,13 +320,15 @@ class Solver:
 
 	############################## win conditions  ##############################
 	def win1(self): # """ case a = b"""
+		""" contradiction:  reduced to a = b, but a =/= b """
 		right, left = self.eqn.right, self.eqn.left
 		return (left.isConstTerm() and right.isConstTerm() and left != right)
 	def win2(self):
-		""" case ax = b"""
+		""" win condition: ax = b problem is solved """
 		right, left = self.eqn.right, self.eqn.left
 		return left.is_linear and right.isConstTerm() and left.coeffOf(Bases.X) == 1 and left.coeffOf(Bases.CONST) is None
 	def win3(self):
+		""" win condition: lhs is completely factored, rhs is zero """
 		right, left = self.eqn.right, self.eqn.left
 		return ( self.eqn.degree() >= 2 and left.isFactored() and right.is_zero )
 
@@ -364,26 +366,26 @@ class Solver:
 		return simplifyPolyTerms(no_zeroes, StdPoly.zero(), SumPoly)
 
 	def simp0(self):
-		""" if sumpoly has zeroes remove them """
+		""" if zeroes exist as additive terms, then remove them """
 		cond	= lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in x.subpoly])
 		action	= Solver._removeZeroes
 		return self.checkEqnForRule(cond, action)
 
 	def simp1(self):
-		""" set working mem goal, if degree is >= 2 """
+		""" if degree is >= 2, then set working mem goal to make rhs zero """
 		if self.eqn.degree() >= 2 and not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
 			self.working_mem.addGoal(WorkingMem.SET_RHS_ZERO)
 			return True
 		return False
 
 	def simp2(self):
-		""" if sum poly has common terms, then add them together """
+		""" if sumpoly has common terms, then add them together """
 		cond	= lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x)
 		action	= SumPoly.sumCommonTerms
 		return self.checkEqnForRule(cond, action)
 
 	def simp3(self):
-		""" if solving linear eqn, move everything except constant terms to lhs """
+		""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """
 		left, right = self.eqn.left, self.eqn.right
 		# TODO: may have to fix when this rule fires, what if we have x+3 = 2, can't proceed
 		if not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not right.isConstTerm():
@@ -398,7 +400,7 @@ class Solver:
 		return False
 
 	def simp4(self):
-		""" if equation is higher than 1st degree set rhs to zero"""
+		""" if our goal is to set rhs to zero, then subtract all rhs terms from lhs"""
 		if self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not self.eqn.right.is_zero:
 			self.eqn.left = self.eqn.left.subtract(self.eqn.right)
 			self.eqn.right = self.eqn.right.subtract(self.eqn.right)
@@ -406,21 +408,19 @@ class Solver:
 		return False
 
 	def simp5(self):
-		""" if num and denom of a rational polynomial have common factors, remove them"""
+		""" if num and denom of a rational polynomial have common factors, then cancel these factors """
 		cond = lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p)
 		action = RatPoly.cancelCommonFactors
 		return self.checkEqnForRule(cond, action)
 
 	def mult1(self):
-		""" if denom of rational poly is a fraction, multiply by its reciprocal """
+		""" if denom of rational poly is a fraction, the multiply by its reciprocal """
 		cond	= lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly)
 		action	= lambda p: ProdPoly([p.num, p.denom.reciprocal()])
 		return self.checkEqnForRule(cond, action)
 
 	def mult2(self):
-		""" if both sides of eqn have fractions, then multiply each side by lcm
-			over all fractions.
-		"""
+		""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
 		if self.eqn.left.hasFractions() and  self.eqn.right.hasFractions():
 			# get list of denom from both sides
 			left_denom = [i.denom for i in self.eqn.left.getFractions()]
@@ -445,6 +445,7 @@ class Solver:
 		return SumPoly(ls)
 
 	def mult4(self):
+		""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm"""
 		cond = lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(p.getFractions()) > 1
 		action = Solver.mult4Helper
 		return self.checkEqnForRule(cond, action)
@@ -455,25 +456,26 @@ class Solver:
 		return simplifyPolyTerms(new_terms, StdPoly.zero(), ProdPoly)
 
 	def mult5(self):
+		""" if a there is a product polynomial, then foil the first two factors"""
 		cond = lambda p: isinstance(p, ProdPoly)
 		action = Solver.mult5Helper
 		return self.checkEqnForRule(cond, action)
 
 	def heur1(self):
-		""" attempt to factor a polynomial of degree  == 2 """
+		""" if a 2nd degree polynomial occurs anywhere, then attempt to factor it """
 		# TODO: fix this to handle SumPoly's also!!
 		cond = lambda p:  isinstance(p, StdPoly) and p.is_quadratic and isinstance(p.factor(), sp.Mul) # TODO: look for is_factorable() method
 		action = lambda p : Solver.factor(p)[0]
 		return self.checkEqnForRule(cond, action)
 
 	def heur2(self):
-		""" factor by completing the square """
+		""" if a 2nd degree polynomial occurs anywhere, then factor it by completing the square """
 		cond = lambda p: isinstance(p, StdPoly) and p.is_quadratic and Solver.completeSquare(p)[1]
 		action = lambda p : Solver.completeSquare(p)[0]
 		return self.checkEqnForRule(cond, action)
 
 	def heur3(self):
-		""" attempt to factor a polynomial of degree  == 3 """
+		""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """
 		cond = lambda p: p.degree() == 3 and isinstance(p, StdPoly) and Solver.factorCubic(p)[1]
 		action = lambda p : Solver.factorCubic(p)[0]
 		return self.checkEqnForRule(cond, action)
