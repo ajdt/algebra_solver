@@ -300,6 +300,23 @@ class Eqn:
 	def copy(self): return Eqn(self.left.copy(), self.right.copy())
 	def degree(self): return max([self.left.degree(), self.right.degree()])
 
+	@staticmethod
+	def convertToPolyTree(sympoly):
+		""" convert a sympy.add.Add or sympy.mul.Mul to the tree structure used in rest of program
+		NOTE: when we refactor to use sympy Add and Mul classes, this will no longer be necessary
+		"""
+		if sympoly.is_polynomial() and all([sp.Poly(p, x_symb).is_monomial for p in sympoly.args]):
+			return StdPoly(sympoly, x_symb)
+		elif sympoly.is_Mul and sympoly.is_rational_function: # rational poly
+			return RatPoly(Eqn.convertToPolyTree(sympoly.args[1]), Eqn.convertToPolyTree(sympoly.args[0].args[0]) )
+		elif sympoly.is_Mul: # mult poly
+			return ProdPoly( [ Eqn.convertToPolyTree(p) for p in sympoly.args ] )
+		elif sympoly.is_Add :
+			return SumPoly( [ Eqn.convertToPolyTree(p) for p in sympoly.args ] )
+		else :
+			raise TypeError
+
+
 class WorkingMem:
 	SET_RHS_ZERO = 'set rhs zero'
 	def __init__(self):
