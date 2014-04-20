@@ -352,14 +352,21 @@ class Eqn:
 
 class WorkingMem:
 	SET_RHS_ZERO = 'set rhs zero'
-	def __init__(self):
+	def __init__(self, steps_in_latex=False):
+		self.steps_in_latex = steps_in_latex
 		self.backtrack_stack = []
 		self.steps = []
 		self.goals = []
 	def hasGoal(self, goal): return goal in self.goals
 	def addGoal(self, goal): self.goals.append(goal)
 	def removeGoal(self, goal): self.goals.remove(goal)
-	def addStep(self, eqn, rule) : self.steps.append(str(eqn) + ': ' + rule.__name__)
+	def addStep(self, eqn, rule) : 
+		if not self.steps_in_latex:
+			self.steps.append(str(eqn) + ': ' + rule.__name__)
+		else :
+			# TODO: this will be simplified when we switch completely to Mult and Add classes in sympy
+			sympy_eqn = sp.Eq( sp.sympify(str(eqn.left), evaluate=False), sp.sympify(str(eqn.right), evaluate=False))
+			self.steps.append('$$' + sp.latex(sympy_eqn) + '\t\t: \\text{ ' + rule.__name__ + '}$$')
 	def btpeek(self): return self.backtrack_stack[-1]
 	def btpop(self) : return self.backtrack_stack.pop()
 	def btpush(self, eqn) : return self.backtrack_stack.append(eqn)
