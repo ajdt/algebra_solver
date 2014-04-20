@@ -129,6 +129,8 @@ class ProdPoly(CorePoly):
 	def mult(self,poly):
 		if isinstance(poly, ProdPoly):
 			return ProdPoly(self.subpoly + poly.subpoly)
+		elif isinstance(poly, RatPoly):
+			return RatPoly(self.mult(poly.num), poly.denom)
 		else:
 			return ProdPoly(self.subpoly + [poly])
 
@@ -189,7 +191,7 @@ class ProdPoly(CorePoly):
 		if not self.isSameTerm(other):
 			return self.addition(other)
 		else:
-			return ProdPoly(self.subpoly + [StdPoly(2)])
+			return ProdPoly(self.subpoly + [StdPoly(2, x_symb)])
 	def commonFactors(self): raise NotImplementedError
 	def commonFactors(self, other): raise NotImplementedError
 	def isConstantTerm(self): return False
@@ -205,6 +207,8 @@ class RatPoly(CorePoly):
 	def mult(self, other) :
 		if isinstance(other, RatPoly):
 			return RatPoly(self.num.mult(other.num), self.denom.mult(other.denom))
+		elif isinstance(other, ProdPoly):
+			return RatPoly(self.num.mult(other), self.denom)
 		else:
 			return ProdPoly([self, other])
 	def divide(self, other): return RatPoly(self.num, self.denom.mult(other))
@@ -479,14 +483,19 @@ class Solver:
 
 	def mult2(self):
 		""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
-		if self.eqn.left.hasFractions() and  self.eqn.right.hasFractions():
+		# TODO: remove right.is_zero condition, after fixing the condition that requires moving everything to lhs
+		# TODO: remove the code for checking if rhs is zero, and adjusting likewise
+		# TODO: SIMPLIFY THIS CODE!!
+		# TODO: make atomic, right now does distributive and multiplicative step.
+		if self.eqn.left.hasFractions() and  (self.eqn.right.hasFractions() or self.eqn.right.is_zero) :
 			# get list of denom from both sides
 			left_denom = [i.denom for i in self.eqn.left.getFractions()]
-			right_denom = [i.denom for i in self.eqn.right.getFractions()]
+			right_denom = [] if self.eqn.right.is_zero else [i.denom for i in self.eqn.right.getFractions()]
 			# compute lcm and multiply
 			lcm = simplifyPolyTerms(Solver.computeLCM(left_denom + right_denom), StdPoly.one(), ProdPoly)
-			self.eqn.right = self.eqn.right.mult(lcm)
-			self.eqn.left = self.eqn.left.mult(lcm)
+			left = SumPoly([p.mult(lcm) for p in self.eqn.left.subpoly]) if isinstance(self.eqn.left, SumPoly) else self.eqn.left.mult(lcm)
+			self.eqn.left = left
+			self.eqn.right = self.eqn.right if self.eqn.right.is_zero else self.eqn.right.mult(lcm)
 			return True
 		return False
 
@@ -661,7 +670,7 @@ class Solver:
 		for rule in self.WIN_RULES:
 			if rule(self) :
 				#print "win condition " + rule.__name__ + " applies"
-				self.working_mem.addStep( self.eqn, rule.__name__)
+				self.working_mem.addStep( self.eqn, rule)
 				return True
 		return False
 
