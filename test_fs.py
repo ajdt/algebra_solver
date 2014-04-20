@@ -71,9 +71,14 @@ class SampleCasesTest(unittest.TestCase):
 								'x**2 + 3*x=x**2 + 3: simp1',
 								'x**2 + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3: simp4',
 								'3*x - 3=x**2 + 3 + -x**2 - 3: simp2',
-								'3*x - 3=0: simp2'
+								'3*x - 3=0: simp2',
+								'3*x - 3=0: simp9',
+								'3*x - 3 + 3=0 + 3: simp3',
+								'3*x - 3 + 3=3: simp0',
+								'3*x=3: simp2',
+								'x=(3)/(3): simp8',
+								'x=(3)/(3): win2'
 							]
-		#pdb.set_trace()
 		steps = solver.solve()
 		self.assertEqual(steps, expected_steps)
 
@@ -84,11 +89,19 @@ class SampleCasesTest(unittest.TestCase):
 								'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3: simp4',
 								'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=0: simp2',
 								'x**2 + 3*x + -x**2 - 3=0: simp5',
-								'-3 + 3*x=0: simp2'
+								'-3 + 3*x=0: simp2',
+								'-3 + 3*x=0: simp9',
+								'-3 + 3*x + 3 + 0=0 + 3 + 0: simp3',
+								'-3 + 3*x + 3=0 + 3 + 0: simp0',
+								'-3 + 3*x + 3=3 + 0: simp0',
+								'-3 + 3*x + 3=3: simp0',
+								'0 + 3*x=3: simp2',
+								'x=(3)/(3): simp8',
+								'x=(3)/(3): win2'
 							]
 		steps = solver.solve()
 		self.assertEqual(steps, expected_steps)
-		self.assertEqual(str(solver.eqn), '-3 + 3*x=0')
+		self.assertEqual(str(solver.eqn), 'x=(3)/(3)')
 	def test_solve5(self):
 		solver = Solver(Eqn('(x-1)/(x**2-2*x-3) + (x+2)/(x**2-9) = (2*x+5)/(x**2 + 4*x + 3)'))
 		expected_steps =	[	'(x - 1)/(x**2 - 2*x - 3) + (x + 2)/(x**2 - 9)=(2*x + 5)/(x**2 + 4*x + 3): solve',
@@ -100,11 +113,17 @@ class SampleCasesTest(unittest.TestCase):
 								'((x + 1) * (x - 3) * (x + 3) * (x - 1))/((x + 1) * (x - 3)) + ((x + 1) * (x - 3) * (x + 3) * (x + 2))/((x - 3) * (x + 3)) + ((x + 1) * (x - 3) * (x + 3) * (-2*x - 5))/((x + 1) * (x + 3))=0: mult2',
 								'(x + 3) * (x - 1) + (x + 1) * (x + 2) + (x - 3) * (-2*x - 5)=0: simp5',
 								'x**2 + 2*x - 3 + x**2 + 3*x + 2 + -2*x**2 + x + 15=0: mult5',
-								'6*x + 14=0: simp2'
+								'6*x + 14=0: simp2',
+								'6*x + 14=0: simp9',
+								'6*x + 14 + -14=0 + -14: simp3',
+								'6*x + 14 + -14=-14: simp0',
+								'6*x=-14: simp2',
+								'x=(-14)/(6): simp8',
+								'x=(-14)/(6): win2'
 							]
 		steps = solver.solve()
 		self.assertEqual(steps, expected_steps)
-		self.assertEqual(str(solver.eqn), '6*x + 14=0')
+		self.assertEqual(str(solver.eqn), 'x=(-14)/(6)')
 
 
 class SolverRuleTest(unittest.TestCase):

@@ -474,6 +474,23 @@ class Solver:
 			self.eqn.left = self.eqn.left.num
 			return True
 		return False
+	def simp8(self):
+		""" if equation has form ax = b, divide by a """
+		right, left = self.eqn.right, self.eqn.left
+		if right.isConstTerm() and left.is_linear and left.coeffOf(Bases.X) != 1 and left.coeffOf(Bases.CONST) is None:
+			divisor = left.coeffOf(Bases.X)
+			self.eqn.left = StdPoly(x_symb)
+			self.eqn.right = self.eqn.right.divide(StdPoly(divisor,x_symb))
+			return True
+		else:
+			return False
+
+	def simp9(self):
+		""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal"""
+		if self.eqn.degree() < 2 and self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
+			self.working_mem.removeGoal(WorkingMem.SET_RHS_ZERO)
+			return True
+		return False
 
 	def mult1(self):
 		""" if denom of rational poly is a fraction, the multiply by its reciprocal """
@@ -636,7 +653,7 @@ class Solver:
 
 	############################## checking and solving ##############################
 	## list of rules and precedences they take
-	SIMP_RULES		= [simp6,simp7, simp0, simp1, simp2, simp3, simp4, simp5]
+	SIMP_RULES		= [simp6,simp7, simp8, simp0, simp1, simp2, simp3, simp4, simp5, simp9 ]
 	WIN_RULES		= [win1, win2, win3]
 	MULT_RULES		= [mult1, mult2, mult4, mult5]
 	MISC_RULES		= []
