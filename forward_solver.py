@@ -285,7 +285,13 @@ class StdPoly(sp.Poly, CorePoly):
 	def hasFractions(self): return False
 	def isFactored(self): return self.degree() < 2
 	def isConstTerm(self): return self.degree() == 0
-	def isSameTerm(self, other): return self.__class__ == other.__class__ and self.degree() == other.degree() # TODO: revise this
+	def isSameTerm(self, other): 
+		if not self.__class__ == other.__class__:
+			return False
+		my_coeffs, other_coeffs = list(reversed(self.all_coeffs())), list(reversed(other.all_coeffs()))
+		same_terms = lambda x, y: x is not None and y is not None and x != 0 and y != 0
+		return  any(map(same_terms, my_coeffs, other_coeffs))
+
 	def coeffOf(self, base): return self.coeffs()[0] if base == self.degree() else None # TODO: revise this too
 
 	# MISC HELPERS
@@ -349,11 +355,10 @@ class WorkingMem:
 	def hasGoal(self, goal): return goal in self.goals
 	def addGoal(self, goal): self.goals.append(goal)
 	def removeGoal(self, goal): self.goals.remove(goal)
-	def addStep(self, step) : self.steps.append(step)
+	def addStep(self, eqn, rule) : self.steps.append(str(eqn) + ': ' + rule.__name__)
 	def btpeek(self): return self.backtrack_stack[-1]
 	def btpop(self) : return self.backtrack_stack.pop()
 	def btpush(self, eqn) : return self.backtrack_stack.append(eqn)
-	def addStep(self, step): self.steps.append(step)
 
 class Solver:
 	def __init__(self, eqn): self.eqn, self.working_mem	 = eqn, WorkingMem()
@@ -370,7 +375,8 @@ class Solver:
 	def win3(self):
 		""" win condition: lhs is completely factored, rhs is zero """
 		right, left = self.eqn.right, self.eqn.left
-		return ( self.eqn.degree() >= 2 and left.isFactored() and right.is_zero )
+		# TODO: revisit this rule, it's gotten complex
+		return ( self.eqn.degree() >= 2 and left.isFactored() and right.is_zero and not isinstance(left, SumPoly) and not isinstance(left, RatPoly))
 
 	############################## rules ##############################
 	# structure of recursive rules:
@@ -458,6 +464,12 @@ class Solver:
 		cond	= lambda x : isinstance(x, RatPoly) and x.num.is_zero 
 		action	= lambda x : StdPoly.zero()
 		return self.checkEqnForRule(cond, action)
+	def simp7(self):
+		""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """
+		if isinstance(self.eqn.left, RatPoly) and self.eqn.right.is_zero:
+			self.eqn.left = self.eqn.left.num
+			return True
+		return False
 
 	def mult1(self):
 		""" if denom of rational poly is a fraction, the multiply by its reciprocal """
@@ -615,7 +627,7 @@ class Solver:
 
 	############################## checking and solving ##############################
 	## list of rules and precedences they take
-	SIMP_RULES		= [simp6,simp0, simp1, simp2, simp3, simp4, simp5]
+	SIMP_RULES		= [simp6,simp7, simp0, simp1, simp2, simp3, simp4, simp5]
 	WIN_RULES		= [win1, win2, win3]
 	MULT_RULES		= [mult1, mult2, mult4, mult5]
 	MISC_RULES		= []
@@ -625,14 +637,14 @@ class Solver:
 	## solve the problem
 	def solve(self):
 		"""solve the equation given, return steps to the solution"""
-		self.working_mem.addStep( str(self.eqn) + ":" + "initial state" )
+		self.working_mem.addStep( self.eqn, self.solve)
 		print str(self.eqn)
 		while not self.checkWinCond():
 			applied_rule = None
 			for ruleset in self.ALL_RULES :
 				applied_rule = self.checkRuleSet(ruleset)
 				if applied_rule is not None:
-					self.working_mem.addStep(str(self.eqn) + ":" + applied_rule.__name__) # str indicating what rule was used
+					self.working_mem.addStep(self.eqn, applied_rule) # str indicating what rule was used
 					print self.working_mem.steps[-1]
 					break
 			if applied_rule is None:
@@ -649,6 +661,7 @@ class Solver:
 		for rule in self.WIN_RULES:
 			if rule(self) :
 				#print "win condition " + rule.__name__ + " applies"
+				self.working_mem.addStep( self.eqn, rule.__name__)
 				return True
 		return False
 

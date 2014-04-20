@@ -67,30 +67,30 @@ class SampleCasesTest(unittest.TestCase):
 		"""
 	def test_solve3(self):
 		solver = Solver(Eqn('3*x + x**2 = 3 + x**2'))
-		expected_steps = 	['x**2 + 3*x=x**2 + 3:initial state',
-												'x**2 + 3*x=x**2 + 3:simp1',
-												'x**2 + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3:simp4',
-												'3*x - 3=x**2 + 3 + -x**2 - 3:simp2',
-												'3*x - 3=0:simp2']
+		expected_steps = 	[	'x**2 + 3*x=x**2 + 3: solve',
+								'x**2 + 3*x=x**2 + 3: simp1',
+								'x**2 + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3: simp4',
+								'3*x - 3=x**2 + 3 + -x**2 - 3: simp2',
+								'3*x - 3=0: simp2'
+							]
 		#pdb.set_trace()
-		self.assertEqual(solver.solve(), expected_steps)
+		steps = solver.solve()
+		self.assertEqual(steps, expected_steps)
 
 	def test_solve4(self):
 		solver = Solver(Eqn('(x**2*(x+1)*(x+3))/((x+1)*(x+3)) + 3*x = 3 + x**2'))
-		expected_steps =	[	'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x=x**2 + 3:initial state',
-												'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x=x**2 + 3:simp1',
-												'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3:simp4',
-												'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=0:simp2',
-												'x**2 + 3*x + -x**2 - 3=0:simp5',
-												'-3 + 3*x=0:simp2']
+		expected_steps =	[	'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x=x**2 + 3: solve',
+								'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x=x**2 + 3: simp1',
+								'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3: simp4',
+								'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=0: simp2',
+								'x**2 + 3*x + -x**2 - 3=0: simp5',
+								'-3 + 3*x=0: simp2'
+							]
 		steps = solver.solve()
-		print "##############################"
-		for s in steps:
-			print s
-		print "##############################"
 		self.assertEqual(steps, expected_steps)
 		self.assertEqual(str(solver.eqn), '-3 + 3*x=0')
 	def test_solve5(self):
+		pdb.set_trace()
 		solver = Solver(Eqn('(x-1)/(x**2-2*x-3) + (x+2)/(x**2-9) = (2*x+5)/(x**2 + 4*x + 3)'))
 		solver.solve()
 
