@@ -500,13 +500,13 @@ class Solver:
 	def heur1(self):
 		""" if a 2nd degree polynomial occurs anywhere, then attempt to factor it """
 		# TODO: fix this to handle SumPoly's also!!
-		cond = lambda p:  isinstance(p, StdPoly) and p.is_quadratic and isinstance(p.factor(), sp.Mul) # TODO: look for is_factorable() method
+		cond = lambda p:  isinstance(p, StdPoly) and p.degree() == 2 and isinstance(p.factor(x_symb), sp.Mul) # TODO: look for is_factorable() method
 		action = lambda p : Solver.factor(p)[0]
 		return self.checkEqnForRule(cond, action)
 
 	def heur2(self):
 		""" if a 2nd degree polynomial occurs anywhere, then factor it by completing the square """
-		cond = lambda p: isinstance(p, StdPoly) and p.is_quadratic and Solver.completeSquare(p)[1]
+		cond = lambda p: isinstance(p, StdPoly) and p.degree() == 2 and Solver.completeSquare(p)[1]
 		action = lambda p : Solver.completeSquare(p)[0]
 		return self.checkEqnForRule(cond, action)
 
@@ -543,8 +543,8 @@ class Solver:
 		if not isinstance(std_poly, StdPoly):
 			raise TypeError
 		# TODO: for now assumes a = 1, to avoid fractions
-		d = std_poly.all_coeffs()[-2]**2/4 # take coeff attached to x term
-		c = std_poly.all_coeffs()[-1]
+		d = std_poly.coeff_monomial(x_symb)**2/4 # take coeff attached to x term
+		c = std_poly.coeff_monomial(x_symb**0) # coef of constant term
 		poly = (std_poly - c + d).factor()
 		if isinstance(poly, sp.Pow): # factoring was successful
 			factor = StdPoly(poly.args[0])
@@ -589,9 +589,9 @@ class Solver:
 	## list of rules and precedences they take
 	SIMP_RULES		= [simp0, simp1, simp2, simp3, simp4, simp5]
 	WIN_RULES		= [win1, win2, win3]
-	MULT_RULES		= [mult1, mult2]
+	MULT_RULES		= [mult1, mult2, mult4, mult5]
 	MISC_RULES		= []
-	HEURISTICS		= []
+	HEURISTICS		= [heur1, heur2, heur3]
 	ALL_RULES 		= [SIMP_RULES, WIN_RULES, MULT_RULES, MISC_RULES, HEURISTICS]
 
 	## solve the problem
