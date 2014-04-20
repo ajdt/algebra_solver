@@ -61,10 +61,18 @@ class SampleCasesTest(unittest.TestCase):
 
 		solver = Solver(Eqn('10*x + 3 + -3=10')) # TODO: change so sp.poly doesn't simplify automatically!
 		self.assertEqual(solver.solve(), '10x=10')
+		"""
 	def test_solve2(self):
 		solver = Solver(Eqn('10*x + 3 = 10 + 3*x'))
-		self.assertEqual(solver.solve(), '7x=7')
-		"""
+		expected_steps = 	[	'10*x + 3=3*x + 10: solve',
+								'-3*x + -3 + 10*x + 3=-3*x + -3 + 3*x + 10: simp3',
+								'7*x + 3 + -3=-3*x + -3 + 3*x + 10: simp2',
+								'7*x=-3*x + -3 + 3*x + 10: simp2',
+								'7*x=10 + -3: simp2',
+								'x=(10 + -3)/(7): simp8',
+								'x=(10 + -3)/(7): win2'
+							]
+		self.assertEqual(solver.solve(), expected_steps)
 	def test_solve3(self):
 		solver = Solver(Eqn('3*x + x**2 = 3 + x**2'))
 		expected_steps = 	[	'x**2 + 3*x=x**2 + 3: solve',
@@ -91,9 +99,7 @@ class SampleCasesTest(unittest.TestCase):
 								'x**2 + 3*x + -x**2 - 3=0: simp5',
 								'-3 + 3*x=0: simp2',
 								'-3 + 3*x=0: simp9',
-								'-3 + 3*x + 3 + 0=0 + 3 + 0: simp3',
-								'-3 + 3*x + 3=0 + 3 + 0: simp0',
-								'-3 + 3*x + 3=3 + 0: simp0',
+								'-3 + 3*x + 3=0 + 3: simp3',
 								'-3 + 3*x + 3=3: simp0',
 								'0 + 3*x=3: simp2',
 								'x=(3)/(3): simp8',

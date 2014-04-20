@@ -24,8 +24,12 @@ class CorePoly(object):
 		self.is_linear = self.degree() < 2
 		self.is_one = False
     # these operations don't do any simplification
-	def addition(self, poly) : return SumPoly([self, poly])
-	def subtract(self, poly) : return SumPoly([self, poly.neg() ])
+	def addition(self, poly) : 
+		if isinstance(poly, SumPoly):
+			return poly.addition(self)
+		else:
+			return SumPoly([self, poly])
+	def subtract(self, poly) : return self.addition(poly.neg())
 	def mult(self, poly) : # TODO: apply same fix to additon/subtraction etc.
 		if isinstance(poly, ProdPoly):
 			return poly.mult(self)
@@ -447,6 +451,7 @@ class Solver:
 		# TODO: may have to fix when this rule fires, what if we have x+3 = 2, can't proceed
 		if not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not right.isConstTerm():
 			to_remove = right.getNonConstTerms() + left.getConstTerms()
+			to_remove = [p for p in to_remove if not p.is_zero] # remove all zero terms
 			if len(to_remove) == 0:
 				return False
 			else:
@@ -717,3 +722,5 @@ class Solver:
 # use model checker?
 # cmbc
 # strict hierarchy, or limit to tree depth
+#
+# python to run specific tests: python -m unittest test_fs.SampleCasesTest.test_solve2
