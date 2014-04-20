@@ -56,12 +56,18 @@ class SolverTest(unittest.TestCase):
 		self.assertFalse(solver.win3())
 
 class SampleCasesTest(unittest.TestCase):
-	"""
 	def test_solve1(self):
 
-		solver = Solver(Eqn('10*x + 3 + -3=10')) # TODO: change so sp.poly doesn't simplify automatically!
-		self.assertEqual(solver.solve(), '10x=10')
-		"""
+		solver = Solver(Eqn('10*x + 3 + -3=10')) 
+		solver.eqn.left = SumPoly( [StdPoly(10*x_symb + 3), StdPoly(-3, x_symb)]) # TODO: change so sp.poly doesn't simplify automatically!
+		expected_steps = 	[	'10*x + 3 + -3=10: solve',
+								'10*x=10: simp2',
+								'x=(10)/(10): simp8',
+								'x=(10)/(10): win2'
+							]
+		steps = solver.solve()
+		self.assertEqual(steps, expected_steps)
+		self.assertEqual(str(solver.eqn), 'x=(10)/(10)')
 	def test_solve2(self):
 		solver = Solver(Eqn('10*x + 3 = 10 + 3*x'))
 		expected_steps = 	[	'10*x + 3=3*x + 10: solve',
