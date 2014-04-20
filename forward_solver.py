@@ -449,6 +449,12 @@ class Solver:
 		action = RatPoly.cancelCommonFactors
 		return self.checkEqnForRule(cond, action)
 
+	def simp6(self):
+		""" if zero exists in a numerator, remove the fraction involved """
+		cond	= lambda x : isinstance(x, RatPoly) and x.num.is_zero 
+		action	= lambda x : StdPoly.zero()
+		return self.checkEqnForRule(cond, action)
+
 	def mult1(self):
 		""" if denom of rational poly is a fraction, the multiply by its reciprocal """
 		cond	= lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly)
@@ -473,11 +479,11 @@ class Solver:
 		lcm = Solver.computeLCM( [ i.denom for i in sum_poly.getFractions() ])
 		rp = RatPoly(lcm, lcm.copy())
 		ls = []
-		for i in range(len(p.subpoly)):
-			if isinstance(p.subpoly[i], RatPoly):
-				ls.append(p.subpoly[i].mult(rp))
+		for i in range(len(sum_poly.subpoly)):
+			if isinstance(sum_poly.subpoly[i], RatPoly):
+				ls.append(sum_poly.subpoly[i].mult(rp))
 			else:
-				ls.append(p.subpoly[i])
+				ls.append(sum_poly.subpoly[i])
 		return SumPoly(ls)
 
 	def mult4(self):
@@ -587,24 +593,25 @@ class Solver:
 
 	############################## checking and solving ##############################
 	## list of rules and precedences they take
-	SIMP_RULES		= [simp0, simp1, simp2, simp3, simp4, simp5]
+	SIMP_RULES		= [simp6,simp0, simp1, simp2, simp3, simp4, simp5]
 	WIN_RULES		= [win1, win2, win3]
 	MULT_RULES		= [mult1, mult2, mult4, mult5]
 	MISC_RULES		= []
 	HEURISTICS		= [heur1, heur2, heur3]
-	ALL_RULES 		= [SIMP_RULES, WIN_RULES, MULT_RULES, MISC_RULES, HEURISTICS]
+	ALL_RULES 		= [SIMP_RULES, MULT_RULES, MISC_RULES, HEURISTICS]
 
 	## solve the problem
 	def solve(self):
 		"""solve the equation given, return steps to the solution"""
 		self.working_mem.addStep( str(self.eqn) + ":" + "initial state" )
+		print str(self.eqn)
 		while not self.checkWinCond():
-			#print str(self.eqn)
 			applied_rule = None
 			for ruleset in self.ALL_RULES :
 				applied_rule = self.checkRuleSet(ruleset)
 				if applied_rule is not None:
 					self.working_mem.addStep(str(self.eqn) + ":" + applied_rule.__name__) # str indicating what rule was used
+					print self.working_mem.steps[-1]
 					break
 			if applied_rule is None:
 				print " no rules applied "

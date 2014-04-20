@@ -90,6 +90,10 @@ class SampleCasesTest(unittest.TestCase):
 		print "##############################"
 		self.assertEqual(steps, expected_steps)
 		self.assertEqual(str(solver.eqn), '-3 + 3*x=0')
+	def test_solve5(self):
+		solver = Solver(Eqn('(x-1)/(x**2-2*x-3) + (x+2)/(x**2-9) = (2*x+5)/(x**2 + 4*x + 3)'))
+		pdb.set_trace()
+		solver.solve()
 
 
 class SolverRuleTest(unittest.TestCase):
