@@ -1,5 +1,6 @@
 import pdb  # used for debugging
 import sympy as sp
+from sympy.parsing.sympy_parser import parse_expr
 
 x_symb = sp.symbols('x')
 poly = sp.Poly(3*x_symb)
@@ -274,7 +275,7 @@ class StdPoly(sp.Poly, CorePoly):
 
 	# UTILITY FUNCTIONS
 	def coef(self): return self.coeffs()[0] # TODO: remove this, temporary while refactoring takes place
-	def __str__(self): return str(self.as_expr()) # don't like how sp.Poly prints polynomials
+	def __str__(self): return str(self.as_expr()).replace('x_symb', 'x') # don't like how sp.Poly prints polynomials
 
 	# BOOLEANS
 	def hasFractions(self): return False
@@ -293,26 +294,44 @@ class StdPoly(sp.Poly, CorePoly):
 	def getConstTerms(self): return [ StdPoly(self.all_coeffs()[-1], x_symb) ]
 	############################## TERMS AND FACTORS ##############################
 class Eqn:
-	def __init__(self, left, right):
-		self.left, self.right = left, right
+	def __init__(self, eqn_string):
+		sides = eqn_string.split('=') # use x_symb variable, and split into two sides
+		l, r  = sp.sympify(sides[0], evaluate=False), sp.sympify(sides[1], evaluate=False)
+		self.left, self.right = Eqn.convertToPolyTree(l), Eqn.convertToPolyTree(r)
+
 	def __str__(self):
 		return str(self.left) + '=' + str(self.right)
 	def copy(self): return Eqn(self.left.copy(), self.right.copy())
 	def degree(self): return max([self.left.degree(), self.right.degree()])
 
 	@staticmethod
+	def strToPolyTree(string):
+		return  Eqn.convertToPolyTree( sp.sympify(string, evaluate=False) ) 
+	@staticmethod
 	def convertToPolyTree(sympoly):
 		""" convert a sympy.add.Add or sympy.mul.Mul to the tree structure used in rest of program
 		NOTE: when we refactor to use sympy Add and Mul classes, this will no longer be necessary
 		"""
+		# TODO: revisit to avoid automatic simplification
 		if sympoly.is_polynomial() and all([sp.Poly(p, x_symb).is_monomial for p in sympoly.args]):
-			return StdPoly(sympoly, x_symb)
-		elif sympoly.is_Mul and sympoly.is_rational_function: # rational poly
+			return StdPoly(sympoly, x_symb) 
+			#TODO: this is inefficient, figure out way to avoid polynomial evaluation!
+			#return simplifyPolyTerms([StdPoly(p, x_symb) for p in sympoly.args], StdPoly.zero(), SumPoly)
+		elif sympoly.is_Mul : 
+			if any([p.is_Pow and (-1 in p.args) for p in sympoly.args ]): # rational poly
+				denom_factors = [Eqn.convertToPolyTree(p.args[0]) for p in sympoly.args if p.is_Pow and (-1 in p.args) ]
+				num_factors = [Eqn.convertToPolyTree(p) for p in sympoly.args if not (p.is_Pow and (-1 in p.args)) ]
+
+				denom_poly = simplifyPolyTerms(denom_factors, StdPoly.one(), ProdPoly)
+				num_poly = simplifyPolyTerms(num_factors, StdPoly.one(), ProdPoly)
+				return RatPoly(num_poly, denom_poly)
+			else :
+				return ProdPoly( [ Eqn.convertToPolyTree(p) for p in sympoly.args ] )
 			return RatPoly(Eqn.convertToPolyTree(sympoly.args[1]), Eqn.convertToPolyTree(sympoly.args[0].args[0]) )
-		elif sympoly.is_Mul: # mult poly
-			return ProdPoly( [ Eqn.convertToPolyTree(p) for p in sympoly.args ] )
 		elif sympoly.is_Add :
 			return SumPoly( [ Eqn.convertToPolyTree(p) for p in sympoly.args ] )
+		elif sympoly.is_Pow :
+			return RatPoly(StdPoly.one(), Eqn.convertToPolyTree(sympoly.args[0]))
 		else :
 			raise TypeError
 
