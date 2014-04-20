@@ -26,7 +26,11 @@ class CorePoly(object):
     # these operations don't do any simplification
 	def addition(self, poly) : return SumPoly([self, poly])
 	def subtract(self, poly) : return SumPoly([self, poly.neg() ])
-	def mult(self, poly) : return ProdPoly([self, poly])
+	def mult(self, poly) : # TODO: apply same fix to additon/subtraction etc.
+		if isinstance(poly, ProdPoly):
+			return poly.mult(self)
+		else:
+			return ProdPoly([self, poly])
 	def divide(self, poly) : return RatPoly(num=self, denom=poly)
 	def neg(self): raise NotImplementedError
 
@@ -90,7 +94,7 @@ class SumPoly(CorePoly):
 	############################## terms and factors ##############################
 	# TODO: implement all of these
 	def __add__(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
-		return sumCommonTerms(SumPoly(self.subpoly + other.subpoly))
+		return SumPoly(self.subpoly + other.subpoly).sumCommonTerms()
 	def isConstantTerm(self): return self.degree() == 0
 	def getNonConstTerms(self): return mergeLists([ p.getNonConstTerms() for p in self.subpoly if isinstance(p, StdPoly)])
 	def getConstTerms(self): return mergeLists([ p.getConstTerms() for p in self.subpoly if isinstance(p, StdPoly)])
@@ -468,22 +472,37 @@ class Solver:
 			left_denom = [i.denom for i in self.eqn.left.getFractions()]
 			right_denom = [i.denom for i in self.eqn.right.getFractions()]
 			# compute lcm and multiply
-			lcm = Solver.computeLCM(left_denom + right_denom)
+			lcm = simplifyPolyTerms(Solver.computeLCM(left_denom + right_denom), StdPoly.one(), ProdPoly)
 			self.eqn.right = self.eqn.right.mult(lcm)
 			self.eqn.left = self.eqn.left.mult(lcm)
 			return True
 		return False
 
 	@staticmethod
+	def removeFactorsFrom(factor, remove_from):
+		"""
+		return a new list with the given polynomial removed
+		"""
+		new_list = list(remove_from)
+		if isinstance(factor, ProdPoly):
+			for p in factor.subpoly:
+				new_list.remove(p)
+		else :
+			new_list.remove(factor)
+		return new_list
+
+	@staticmethod
 	def mult4Helper(sum_poly):
 		lcm = Solver.computeLCM( [ i.denom for i in sum_poly.getFractions() ])
-		rp = RatPoly(lcm, lcm.copy())
 		ls = []
-		for i in range(len(sum_poly.subpoly)):
-			if isinstance(sum_poly.subpoly[i], RatPoly):
-				ls.append(sum_poly.subpoly[i].mult(rp))
+		# multiply all fractions to get a common denominator
+		for poly in sum_poly.subpoly:
+			if isinstance(poly, RatPoly): # compute the correct multiplier to get common denominator
+				multiplier = simplifyPolyTerms( Solver.removeFactorsFrom(poly.denom, lcm), StdPoly.one(), ProdPoly )
+				mult_frac = RatPoly(multiplier, multiplier.copy())
+				ls.append(poly.mult(mult_frac))
 			else:
-				ls.append(sum_poly.subpoly[i])
+				ls.append(poly)
 		return SumPoly(ls)
 
 	def mult4(self):
@@ -524,7 +543,10 @@ class Solver:
 
 	@staticmethod
 	def computeLCM( poly_list):
-		""" compute the lcm of a list of fractions"""
+		"""
+		compute the lcm of a list of fractions
+		@return: list of polynomials in the lcm
+		"""
 		# TODO: overly complex, simplify
 		terms = []
 		for p in poly_list:
@@ -538,10 +560,10 @@ class Solver:
 					if num_p > num_terms:
 						for i in range(num_p - num_terms):
 							terms.append(subpoly)
-
 			elif p not in terms:
 				terms.append(p)
-		return simplifyPolyTerms(terms, StdPoly.one(), ProdPoly)
+
+		return terms
 
 
 	@staticmethod
@@ -587,7 +609,7 @@ class Solver:
 
 		poly = std_poly.factor()
 		if isinstance(poly, sp.Mul): # factoring was successful
-			return (ProdPoly([ StdPoly(p) for p in poly.args ]), True)
+			return (ProdPoly([ StdPoly(p, x_symb) for p in poly.args ]), True)
 		else:
 			return (std_poly, False)
 
@@ -598,7 +620,7 @@ class Solver:
 	MULT_RULES		= [mult1, mult2, mult4, mult5]
 	MISC_RULES		= []
 	HEURISTICS		= [heur1, heur2, heur3]
-	ALL_RULES 		= [SIMP_RULES, MULT_RULES, MISC_RULES, HEURISTICS]
+	ALL_RULES 		= [SIMP_RULES, HEURISTICS, MULT_RULES, MISC_RULES ]
 
 	## solve the problem
 	def solve(self):

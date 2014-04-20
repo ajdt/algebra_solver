@@ -92,7 +92,6 @@ class SampleCasesTest(unittest.TestCase):
 		self.assertEqual(str(solver.eqn), '-3 + 3*x=0')
 	def test_solve5(self):
 		solver = Solver(Eqn('(x-1)/(x**2-2*x-3) + (x+2)/(x**2-9) = (2*x+5)/(x**2 + 4*x + 3)'))
-		pdb.set_trace()
 		solver.solve()
 
 
@@ -196,9 +195,8 @@ class SolverUtilTest(unittest.TestCase):
 	def test_computeLCM(self):
 		sp1, sp2 = StdPoly(x_symb + 3), StdPoly(x_symb + 2)
 		solver = Solver(Eqn('x+3 = x + 2'))
-		self.assertEqual(solver.computeLCM([sp1, sp2]), ProdPoly([sp1, sp2]))
-		print str(solver.computeLCM([sp1, sp1.copy()]))
-		self.assertEqual(solver.computeLCM([sp1, sp1.copy()]), sp1)
+		self.assertEqual( ProdPoly( solver.computeLCM([sp1, sp2]) ), ProdPoly([sp1, sp2]))
+		self.assertEqual(solver.computeLCM([sp1, sp1.copy()]), [sp1])
 
 #pdb.set_trace()
 
