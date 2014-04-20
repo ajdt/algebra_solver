@@ -647,21 +647,21 @@ class Solver:
 	def solve(self):
 		"""solve the equation given, return steps to the solution"""
 		self.working_mem.addStep( self.eqn, self.solve)
-		print str(self.eqn)
+		#print str(self.eqn)
 		while not self.checkWinCond():
 			applied_rule = None
 			for ruleset in self.ALL_RULES :
 				applied_rule = self.checkRuleSet(ruleset)
 				if applied_rule is not None:
 					self.working_mem.addStep(self.eqn, applied_rule) # str indicating what rule was used
-					print self.working_mem.steps[-1]
+					#print self.working_mem.steps[-1]
 					break
 			if applied_rule is None:
-				print " no rules applied "
+				#print " no rules applied "
 				break
 		# print solution and then return it
-		for p in self.working_mem.steps :
-			print p
+		#for p in self.working_mem.steps :
+			#print p
 		return self.working_mem.steps
 
 	def checkWinCond(self):

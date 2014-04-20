@@ -90,9 +90,21 @@ class SampleCasesTest(unittest.TestCase):
 		self.assertEqual(steps, expected_steps)
 		self.assertEqual(str(solver.eqn), '-3 + 3*x=0')
 	def test_solve5(self):
-		pdb.set_trace()
 		solver = Solver(Eqn('(x-1)/(x**2-2*x-3) + (x+2)/(x**2-9) = (2*x+5)/(x**2 + 4*x + 3)'))
-		solver.solve()
+		expected_steps =	[	'(x - 1)/(x**2 - 2*x - 3) + (x + 2)/(x**2 - 9)=(2*x + 5)/(x**2 + 4*x + 3): solve',
+								'(x - 1)/(x**2 - 2*x - 3) + (x + 2)/(x**2 - 9)=(2*x + 5)/(x**2 + 4*x + 3): simp1',
+								'(x - 1)/(x**2 - 2*x - 3) + (x + 2)/(x**2 - 9) + (-2*x - 5)/(x**2 + 4*x + 3)=(2*x + 5)/(x**2 + 4*x + 3) + (-2*x - 5)/(x**2 + 4*x + 3): simp4',
+								'(x - 1)/(x**2 - 2*x - 3) + (x + 2)/(x**2 - 9) + (-2*x - 5)/(x**2 + 4*x + 3)=(0)/(x**2 + 4*x + 3): simp2',
+								'(x - 1)/(x**2 - 2*x - 3) + (x + 2)/(x**2 - 9) + (-2*x - 5)/(x**2 + 4*x + 3)=0: simp6',
+								'(x - 1)/((x + 1) * (x - 3)) + (x + 2)/((x - 3) * (x + 3)) + (-2*x - 5)/((x + 1) * (x + 3))=0: heur1',
+								'((x + 1) * (x - 3) * (x + 3) * (x - 1))/((x + 1) * (x - 3)) + ((x + 1) * (x - 3) * (x + 3) * (x + 2))/((x - 3) * (x + 3)) + ((x + 1) * (x - 3) * (x + 3) * (-2*x - 5))/((x + 1) * (x + 3))=0: mult2',
+								'(x + 3) * (x - 1) + (x + 1) * (x + 2) + (x - 3) * (-2*x - 5)=0: simp5',
+								'x**2 + 2*x - 3 + x**2 + 3*x + 2 + -2*x**2 + x + 15=0: mult5',
+								'6*x + 14=0: simp2'
+							]
+		steps = solver.solve()
+		self.assertEqual(steps, expected_steps)
+		self.assertEqual(str(solver.eqn), '6*x + 14=0')
 
 
 class SolverRuleTest(unittest.TestCase):
