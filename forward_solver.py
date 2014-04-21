@@ -1,9 +1,11 @@
 import pdb  # used for debugging
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
+import random # for random eqn generation
 
+
+# symbol for sympy polynomials 
 x_symb = sp.symbols('x')
-poly = sp.Poly(3*x_symb)
 
 # Utility Functions
 def simplifyPolyTerms(term_list, default, constructor):
@@ -312,6 +314,21 @@ class StdPoly(sp.Poly, CorePoly):
 	def getConstTerms(self): return [ StdPoly(self.all_coeffs()[-1], x_symb) ]
 	############################## TERMS AND FACTORS ##############################
 class Eqn:
+
+	# random generation globals
+	rand = random.Random()
+	ADD, MUL, FRAK, STD = range(4)
+	CONST, LIN, QUAD, CUBIC = range(4)
+	node_types = [(ADD, 4), (MUL, 2), (FRAK,3), (STD,16)]
+	std_types = [(CONST,4), (LIN,8), (QUAD,10), (CUBIC,1)]
+
+	# lists to select from
+	node_list, std_list = [], []
+	for node, weight in node_types:
+		node_list += [node]*weight
+	for std, weight in std_types:
+		std_list += [std]*weight
+
 	def __init__(self, eqn_string):
 		sides = eqn_string.split('=') # use x_symb variable, and split into two sides
 		l, r  = sp.sympify(sides[0], evaluate=False), sp.sympify(sides[1], evaluate=False)
@@ -352,6 +369,39 @@ class Eqn:
 			return RatPoly(StdPoly.one(), Eqn.convertToPolyTree(sympoly.args[0]))
 		else :
 			raise TypeError
+
+	@staticmethod
+	def genRandTree():
+		node_type = random.sample(Eqn.node_list,1)[0]
+		if node_type == Eqn.ADD:
+			num_terms = Eqn.rand.randint(2,3)
+			terms = [Eqn.genRandTree() for i in range(num_terms)]
+			return SumPoly(terms)
+		elif node_type == Eqn.MUL:
+			num_terms = Eqn.rand.randint(2,2)
+			terms = [Eqn.genRandTree() for i in range(num_terms)]
+			return ProdPoly(terms)
+		elif node_type == Eqn.FRAK:
+			num = Eqn.genRandTree()
+			denom = Eqn.genRandTree()
+			return RatPoly(num,denom)
+		elif node_type == Eqn.STD:
+			degree = random.sample(Eqn.std_list, 1)[0]
+			coeff = [random.randint(0,20) for i in range(4)]
+			coeff[degree] = random.randint(1,20)
+			# ensure the coeff of higher degree monomials is zero
+			for i in range(degree+1, len(coeff)):
+				coeff[i] = 0
+			d,c,b,a = coeff # coeffs are listed in ascending order
+			return StdPoly(a*x_symb**3 + b*x_symb**2 + c*x_symb + d, x_symb)
+		return StdPoly.one()
+
+	@staticmethod
+	def genRandEqn():
+		eqn = Eqn('x = 3')
+		eqn.right = Eqn.genRandTree()
+		eqn.left = Eqn.genRandTree()
+		return eqn
 
 
 class WorkingMem:
