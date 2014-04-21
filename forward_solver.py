@@ -425,6 +425,64 @@ class WorkingMem:
 	def btpop(self) : return self.backtrack_stack.pop()
 	def btpush(self, eqn) : return self.backtrack_stack.append(eqn)
 
+class EqnRule(object):
+	"""A rule that applies at the level of a single equation"""
+	def __init__(self, cond, action, desc=""):
+		self._cond, self._action, self._desc = cond, action, desc
+	def checkCondition(self, eqn):
+		""" @return: true if condition applies"""
+		return self._cond(eqn)
+	def applyAction(self, eqn):
+		""" Apply given action to eqn. NOTE: Assumed eqn is mutable; nothing is returned."""
+		self._action(eqn)
+
+class PolyRule(EqnRule):
+	"""A rule that applies to polynomials. Accepts a single equation and traverses the eqn tree."""
+	def __init__(self, *args): EqnRule(self, *args)
+	def checkCondition(self, eqn):
+		return self._checkPoly(eqn.left) or self._checkPoly(eqn.right)
+	def applyAction(self, eqn):
+		""" apply the rules action to given equation, and return the equation"""
+		eqn.left, changed = self._applyactionrecursive(eqn.left)
+		if not changed:
+			eqn.right, changed = self._applyactionrecursive(eqn.left)
+		return eqn
+
+	def _checkPoly(self, poly):
+		""" recursively check if rule applies to polynomial"""
+		if self._cond(poly):
+			return True
+		else:
+			if isinstance(poly, StdPoly):
+				return False
+			elif isinstance(poly, RatPoly):
+				return self._checkPoly(poly.num) or self._checkPoly(poly.denom)
+			else : # SumPoly or ProdPoly
+				return any( [self._checkPoly(p) for p in poly.subpoly] )
+
+	def _applyActionRecursive(self, poly):
+		""" Find a polynomial for which rule applies, apply rule. Boolean indicates rule was applied
+		@return: (new_polynomial, True/False) 
+		"""
+		if self._cond(poly):
+			return (self._action(poly), True)
+		else:
+			if isinstance(poly, StdPoly):
+				return (poly, False)
+			elif isinstance(poly, RatPoly):
+				new_num, changed = self._applyActionRecursive(poly.num)
+				if changed:
+					return (RatPoly(new_num, poly.denom), changed)
+				else:
+					new_denom, changed = self._applyActionRecursive(poly.denom)
+					return (RatPoly(poly.num, new_denom), changed)
+			else : # SumPoly or ProdPoly
+				ls = [self._applyActionRecursive(p) for p in poly.subpoly]
+				terms, bools = map(lambda x: x[0], ls), map(lambda x: x[1], ls)
+				result = SumPoly(terms) if isinstance(poly, SumPoly) else ProdPoly(terms)
+				return (result, any(bools))
+		
+		
 class Solver:
 	def __init__(self, eqn): self.eqn, self.working_mem	 = eqn, WorkingMem()
 
