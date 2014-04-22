@@ -648,7 +648,7 @@ SIMP3 =	EqnRule(	lambda eq, wm : not wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not
 					""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """
 					)
 SIMP4 =	EqnRule(	lambda eq, wm : wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.is_zero,
-					lambda eq, wm : RuleHelper.subtractFromEqn(eqn, eqn.right),
+					lambda eq, wm : RuleHelper.subtractFromEqn(eq, eq.right),
 					""" if our goal is to set rhs to zero, then subtract all rhs terms from lhs"""
 					)
 SIMP5 =	PolyRule(	lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p), 
@@ -660,11 +660,11 @@ SIMP6 =	PolyRule(	lambda x : isinstance(x, RatPoly) and x.num.is_zero ,
 										""" simp6: if zero exists in a numerator, remove the fraction involved """
 					)
 SIMP7 =	EqnRule(	lambda eq, wm : isinstance(eq.left, RatPoly) and eq.right.is_zero, 
-										lambda eq,wm : RuleHelper.setLHSToNum(eqn),
+										lambda eq,wm : RuleHelper.setLHSToNum(eq),
 										""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """
 					)
 SIMP8 =	EqnRule(	lambda eq, wm : eq.right.isConstTerm() and eq.left.is_linear and eq.left.coeffOf(Bases.X) != 1 and eq.left.coeffOf(Bases.CONST) is None, 
-										lambda eq,wm : RuleHelper.simp8Helper(eqn),
+										lambda eq,wm : RuleHelper.simp8Helper(eq),
 										""" if equation has form ax = b, divide by a """
 					)
 SIMP9 =	EqnRule(	lambda eq, wm : eq.degree() < 2 and wm.hasGoal(WorkingMem.SET_RHS_ZERO), 
@@ -781,10 +781,8 @@ class Solver:
 		return False
 
 	def simp4(self):
-		""" if our goal is to set rhs to zero, then subtract all rhs terms from lhs"""
-		if self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not self.eqn.right.is_zero:
-			self.eqn.left = self.eqn.left.subtract(self.eqn.right)
-			self.eqn.right = self.eqn.right.subtract(self.eqn.right)
+		if SIMP4.checkCondition(self.eqn, self.working_mem):
+			SIMP4.applyAction(self.eqn, self.working_mem)
 			return True
 		return False
 
