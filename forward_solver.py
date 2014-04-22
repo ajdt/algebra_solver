@@ -606,6 +606,14 @@ class RuleHelper:
 	def subtractFromEqn(eqn, poly):
 		eqn.right = eqn.right.subtract(poly)
 		eqn.left = eqn.left.subtract(poly)
+	@staticmethod
+	def setLHSToNum(eqn):
+		eqn.left = eqn.left.num
+	@staticmethod
+	def simp8Helper(eqn):
+		divisor = eqn.left.coeffOf(Bases.X)
+		eqn.left = StdPoly(x_symb)
+		eqn.right = eqn.right.divide(StdPoly(divisor,x_symb))
 
 ############################## rule specs ##############################	
 # condition, action, description
@@ -637,9 +645,19 @@ SIMP6 =	PolyRule(	lambda x : isinstance(x, RatPoly) and x.num.is_zero ,
 										lambda x : StdPoly.zero(),
 										""" simp6: if zero exists in a numerator, remove the fraction involved """
 					)
-# TODO: SIMP7 
-# TODO: SIMP8 
-# TODO: SIMP9 
+SIMP7 =	EqnRule(	lambda eq, wm : isinstance(eq.left, RatPoly) and eq.right.is_zero, 
+										lambda eq,wm : RuleHelper.setLHSToNum(eqn),
+										""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """
+					)
+SIMP8 =	EqnRule(	lambda eq, wm : eq.right.isConstTerm() and eq.left.is_linear and eq.left.coeffOf(Bases.X) != 1 and eq.left.coeffOf(Bases.CONST) is None, 
+										lambda eq,wm : RuleHelper.simp8Helper(eqn),
+										""" if equation has form ax = b, divide by a """
+					)
+SIMP9 =	EqnRule(	lambda eq, wm : eq.degree() < 2 and wm.hasGoal(WorkingMem.SET_RHS_ZERO), 
+										lambda eq,wm : wm.removeGoal(WorkingMem.SET_RHS_ZERO),
+										""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal"""
+					)
+
 MULT1 =	PolyRule(	lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly), 
 										lambda p: ProdPoly([p.num, p.denom.reciprocal()]),
 										""" if denom of rational poly is a fraction, the multiply by its reciprocal """
