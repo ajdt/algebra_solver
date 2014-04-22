@@ -445,7 +445,7 @@ class PolyRule(EqnRule):
 		""" apply the rules action to given equation, and return the equation"""
 		eqn.left, changed = self._applyActionRecursive(eqn.left)
 		if not changed:
-			eqn.right, changed = self._applyActionRecursive(eqn.left)
+			eqn.right, changed = self._applyActionRecursive(eqn.right)
 		return eqn
 
 	def _checkPoly(self, poly):
@@ -740,10 +740,10 @@ class Solver:
 		return simplifyPolyTerms(no_zeroes, StdPoly.zero(), SumPoly)
 
 	def simp0(self):
-		""" if zeroes exist as additive terms, then remove them """
-		cond	= lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in x.subpoly])
-		action	= Solver._removeZeroes
-		return self.checkEqnForRule(cond, action)
+		if SIMP0.checkCondition(self.eqn, self.working_mem):
+			SIMP0.applyAction(self.eqn, self.working_mem)
+			return True
+		return False
 
 	def simp1(self):
 		""" if degree is >= 2, then set working mem goal to make rhs zero """
