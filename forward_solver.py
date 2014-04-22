@@ -483,6 +483,211 @@ class PolyRule(EqnRule):
 				return (result, any(bools))
 		
 		
+class RuleHelper:
+	""" contains mostly static methods to help rules operate on polys"""
+	@staticmethod
+	def computeLCM( poly_list):
+		"""
+		compute the lcm of a list of fractions
+		@return: list of polynomials in the lcm
+		"""
+		# TODO: overly complex, simplify
+		terms = []
+		for p in poly_list:
+			if isinstance(p, ProdPoly):
+				for subpoly in p.subpoly:
+					num_p = len([x for x in p.subpoly if x == subpoly])
+					num_terms = len([x for x in terms if x == subpoly])
+					# if subpoly occurs in p more times than already
+					# accounted for, then include it until we have
+					# enough multiples
+					if num_p > num_terms:
+						for i in range(num_p - num_terms):
+							terms.append(subpoly)
+			elif p not in terms:
+				terms.append(p)
+		return terms
+
+
+	@staticmethod
+	def completeSquare(std_poly):
+		if not isinstance(std_poly, StdPoly):
+			raise TypeError
+		# TODO: for now assumes a = 1, to avoid fractions
+		d = std_poly.coeff_monomial(x_symb)**2/4 # take coeff attached to x term
+		c = std_poly.coeff_monomial(x_symb**0) # coef of constant term
+		poly = (std_poly - c + d).factor()
+		if isinstance(poly, sp.Pow): # factoring was successful
+			factor = StdPoly(poly.args[0])
+			return (SumPoly([ProdPoly([factor, factor.copy()]), StdPoly(c - d, x_symb)]), True)
+		else:
+			return (std_poly, False)
+
+	@staticmethod
+	def factorCubic(std_poly):
+		"""
+		factors a sumpoly that is in standard form
+		@return: (factored_poly, True) otherwise (original_poly, False)
+		XXX: assumes poly is in standard form
+		"""
+		if not isinstance(std_poly, StdPoly):
+			raise TypeError
+
+		poly = std_poly.factor()
+		if isinstance(poly, sp.Mul): # factoring was successful
+			return (ProdPoly([StdPoly(p) for p in poly.args]), True)
+		else:
+			return (std_poly, False)
+
+	@staticmethod
+	def factor(std_poly):
+		"""
+		factors a standard poly
+		@return: (factored_poly, True) otherwise (original_poly, False)
+		XXX: assumes poly is in standard form
+		"""
+		# TODO: remove boolean return value
+		if not isinstance(std_poly, StdPoly):
+			raise TypeError
+
+		poly = std_poly.factor()
+		if isinstance(poly, sp.Mul): # factoring was successful
+			return (ProdPoly([ StdPoly(p, x_symb) for p in poly.args ]), True)
+		else:
+			return (std_poly, False)
+
+	@staticmethod
+	def _removeZeroes(sum_poly):
+		no_zeroes = [p for p in sum_poly.subpoly if not p.is_zero ]
+		return simplifyPolyTerms(no_zeroes, StdPoly.zero(), SumPoly)
+	@staticmethod
+	def removeFactorsFrom(factor, remove_from):
+		"""
+		return a new list with the given polynomial removed
+		"""
+		new_list = list(remove_from)
+		if isinstance(factor, ProdPoly):
+			for p in factor.subpoly:
+				new_list.remove(p)
+		else :
+			new_list.remove(factor)
+		return new_list
+
+	@staticmethod
+	def mult4Helper(sum_poly):
+		lcm = Solver.computeLCM( [ i.denom for i in sum_poly.getFractions() ])
+		ls = []
+		# multiply all fractions to get a common denominator
+		for poly in sum_poly.subpoly:
+			if isinstance(poly, RatPoly): # compute the correct multiplier to get common denominator
+				multiplier = simplifyPolyTerms( Solver.removeFactorsFrom(poly.denom, lcm), StdPoly.one(), ProdPoly )
+				mult_frac = RatPoly(multiplier, multiplier.copy())
+				ls.append(poly.mult(mult_frac))
+			else:
+				ls.append(poly)
+		return SumPoly(ls)
+	@staticmethod
+	def mult5Helper(prod_poly):
+		new_terms = [ProdPoly.foil(prod_poly.subpoly[0], prod_poly.subpoly[1]) ] + prod_poly.subpoly[2:]
+		return simplifyPolyTerms(new_terms, StdPoly.zero(), ProdPoly)
+
+############################## rule specs ##############################	
+# condition, action, description
+SIMP0 =	PolyRule(	lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in x.subpoly]), 
+										RuleHelper._removeZeroes,
+										""" simp0: if zeroes exist as additive terms, then remove them """
+					)
+# TODO: SIMP1
+SIMP2 =	PolyRule(	lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x), 
+										SumPoly.sumCommonTerms,
+										""" simp2: if sumpoly has common terms, then add them together """
+					)
+# TODO: SIMP3
+# TODO: SIMP4
+SIMP5 =	PolyRule(	lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p), 
+										RatPoly.cancelCommonFactors,
+										""" simp5: if num and denom of a rational polynomial have common factors, then cancel these factors """
+					)
+SIMP6 =	PolyRule(	lambda x : isinstance(x, RatPoly) and x.num.is_zero , 
+										lambda x : StdPoly.zero(),
+										""" simp6: if zero exists in a numerator, remove the fraction involved """
+					)
+# TODO: SIMP7 
+# TODO: SIMP8 
+# TODO: SIMP9 
+MULT1 =	PolyRule(	lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly), 
+										lambda p: ProdPoly([p.num, p.denom.reciprocal()]),
+										""" if denom of rational poly is a fraction, the multiply by its reciprocal """
+					)
+# TODO: MULT2 
+
+##def mult2(self):
+##	""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
+##	# TODO: remove right.is_zero condition, after fixing the condition that requires moving everything to lhs
+##	# TODO: remove the code for checking if rhs is zero, and adjusting likewise
+##	# TODO: SIMPLIFY THIS CODE!!
+##	# TODO: make atomic, right now does distributive and multiplicative step.
+##	if self.eqn.left.hasFractions() and  (self.eqn.right.hasFractions() or self.eqn.right.is_zero) :
+##		# get list of denom from both sides
+##		left_denom = [i.denom for i in self.eqn.left.getFractions()]
+##		right_denom = [] if self.eqn.right.is_zero else [i.denom for i in self.eqn.right.getFractions()]
+##		# compute lcm and multiply
+##		lcm = simplifyPolyTerms(RuleHelper.computeLCM(left_denom + right_denom), StdPoly.one(), ProdPoly)
+##		left = SumPoly([p.mult(lcm) for p in self.eqn.left.subpoly]) if isinstance(self.eqn.left, SumPoly) else self.eqn.left.mult(lcm)
+##		self.eqn.left = left
+##		self.eqn.right = self.eqn.right if self.eqn.right.is_zero else self.eqn.right.mult(lcm)
+##		return True
+##	return False
+
+
+MULT4 =	PolyRule( lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(p.getFractions()) > 1,
+										RuleHelper.mult4Helper,
+										""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm"""
+									)
+
+MULT5 =	PolyRule(lambda p: isinstance(p, ProdPoly),
+									RuleHelper.mult5Helper,
+									""" if a there is a product polynomial, then foil the first two factors"""
+									)
+
+HEUR1 =	PolyRule(lambda p:  isinstance(p, StdPoly) and p.degree() == 2 and isinstance(p.factor(x_symb), sp.Mul) # TODO: look for is_factorable() method
+									,lambda p : RuleHelper.factor(p)[0]
+									,""" if a 2nd degree polynomial occurs anywhere, then attempt to factor it """
+									)
+
+HEUR2 =	PolyRule(lambda p: isinstance(p, StdPoly) and p.degree() == 2 and RuleHelper.completeSquare(p)[1]
+									,lambda p : RuleHelper.completeSquare(p)[0]
+									,""" if a 2nd degree polynomial occurs anywhere, then factor it by completing the square """
+									)
+
+HEUR3 =	PolyRule(lambda p: p.degree() == 3 and isinstance(p, StdPoly) and RuleHelper.factorCubic(p)[1]
+									,lambda p : RuleHelper.factorCubic(p)[0]
+									,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """
+									)
+##def simp7(self):
+##	""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """
+##	if isinstance(self.eqn.left, RatPoly) and self.eqn.right.is_zero:
+##		self.eqn.left = self.eqn.left.num
+##		return True
+##	return False
+##def simp8(self):
+##	""" if equation has form ax = b, divide by a """
+##	right, left = self.eqn.right, self.eqn.left
+##	if right.isConstTerm() and left.is_linear and left.coeffOf(Bases.X) != 1 and left.coeffOf(Bases.CONST) is None:
+##		divisor = left.coeffOf(Bases.X)
+##		self.eqn.left = StdPoly(x_symb)
+##		self.eqn.right = self.eqn.right.divide(StdPoly(divisor,x_symb))
+##		return True
+##	else:
+##		return False
+
+##def simp9(self):
+##	""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal"""
+##	if self.eqn.degree() < 2 and self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
+##		self.working_mem.removeGoal(WorkingMem.SET_RHS_ZERO)
+##		return True
+##	return False
+
 class Solver:
 	def __init__(self, eqn): self.eqn, self.working_mem	 = eqn, WorkingMem()
 
@@ -819,102 +1024,6 @@ class Solver:
 				return rule
 		return None
 
-############################## rule specs ##############################	
-# condition, action, description
-SIMP0 =	PolyRule(	lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in x.subpoly]), 
-										Solver._removeZeroes,
-										""" simp0: if zeroes exist as additive terms, then remove them """
-					)
-# TODO: SIMP1
-SIMP2 =	PolyRule(	lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x), 
-										SumPoly.sumCommonTerms,
-										""" simp2: if sumpoly has common terms, then add them together """
-					)
-# TODO: SIMP3
-# TODO: SIMP4
-SIMP5 =	PolyRule(	lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p), 
-										RatPoly.cancelCommonFactors,
-										""" simp5: if num and denom of a rational polynomial have common factors, then cancel these factors """
-					)
-SIMP6 =	PolyRule(	lambda x : isinstance(x, RatPoly) and x.num.is_zero , 
-										lambda x : StdPoly.zero(),
-										""" simp6: if zero exists in a numerator, remove the fraction involved """
-					)
-# TODO: SIMP7 
-# TODO: SIMP8 
-# TODO: SIMP9 
-MULT1 =	PolyRule(	lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly), 
-										lambda p: ProdPoly([p.num, p.denom.reciprocal()]),
-										""" if denom of rational poly is a fraction, the multiply by its reciprocal """
-					)
-# TODO: MULT2 
-
-##def mult2(self):
-##	""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
-##	# TODO: remove right.is_zero condition, after fixing the condition that requires moving everything to lhs
-##	# TODO: remove the code for checking if rhs is zero, and adjusting likewise
-##	# TODO: SIMPLIFY THIS CODE!!
-##	# TODO: make atomic, right now does distributive and multiplicative step.
-##	if self.eqn.left.hasFractions() and  (self.eqn.right.hasFractions() or self.eqn.right.is_zero) :
-##		# get list of denom from both sides
-##		left_denom = [i.denom for i in self.eqn.left.getFractions()]
-##		right_denom = [] if self.eqn.right.is_zero else [i.denom for i in self.eqn.right.getFractions()]
-##		# compute lcm and multiply
-##		lcm = simplifyPolyTerms(Solver.computeLCM(left_denom + right_denom), StdPoly.one(), ProdPoly)
-##		left = SumPoly([p.mult(lcm) for p in self.eqn.left.subpoly]) if isinstance(self.eqn.left, SumPoly) else self.eqn.left.mult(lcm)
-##		self.eqn.left = left
-##		self.eqn.right = self.eqn.right if self.eqn.right.is_zero else self.eqn.right.mult(lcm)
-##		return True
-##	return False
-
-
-MULT4 =	PolyRule( lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(p.getFractions()) > 1,
-										Solver.mult4Helper,
-										""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm"""
-									)
-
-MULT5 =	PolyRule(lambda p: isinstance(p, ProdPoly),
-									Solver.mult5Helper,
-									""" if a there is a product polynomial, then foil the first two factors"""
-									)
-
-HEUR1 =	PolyRule(lambda p:  isinstance(p, StdPoly) and p.degree() == 2 and isinstance(p.factor(x_symb), sp.Mul) # TODO: look for is_factorable() method
-									,lambda p : Solver.factor(p)[0]
-									,""" if a 2nd degree polynomial occurs anywhere, then attempt to factor it """
-									)
-
-HEUR2 =	PolyRule(lambda p: isinstance(p, StdPoly) and p.degree() == 2 and Solver.completeSquare(p)[1]
-									,lambda p : Solver.completeSquare(p)[0]
-									,""" if a 2nd degree polynomial occurs anywhere, then factor it by completing the square """
-									)
-
-HEUR3 =	PolyRule(lambda p: p.degree() == 3 and isinstance(p, StdPoly) and Solver.factorCubic(p)[1]
-									,lambda p : Solver.factorCubic(p)[0]
-									,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """
-									)
-##def simp7(self):
-##	""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """
-##	if isinstance(self.eqn.left, RatPoly) and self.eqn.right.is_zero:
-##		self.eqn.left = self.eqn.left.num
-##		return True
-##	return False
-##def simp8(self):
-##	""" if equation has form ax = b, divide by a """
-##	right, left = self.eqn.right, self.eqn.left
-##	if right.isConstTerm() and left.is_linear and left.coeffOf(Bases.X) != 1 and left.coeffOf(Bases.CONST) is None:
-##		divisor = left.coeffOf(Bases.X)
-##		self.eqn.left = StdPoly(x_symb)
-##		self.eqn.right = self.eqn.right.divide(StdPoly(divisor,x_symb))
-##		return True
-##	else:
-##		return False
-
-##def simp9(self):
-##	""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal"""
-##	if self.eqn.degree() < 2 and self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
-##		self.working_mem.removeGoal(WorkingMem.SET_RHS_ZERO)
-##		return True
-##	return False
 
 # Notes:
 #	all/any for reducing a list of booleans
