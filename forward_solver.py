@@ -753,10 +753,10 @@ class Solver:
 		return False
 
 	def simp2(self):
-		""" if sumpoly has common terms, then add them together """
-		cond	= lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x)
-		action	= SumPoly.sumCommonTerms
-		return self.checkEqnForRule(cond, action)
+		if SIMP2.checkCondition(self.eqn, self.working_mem):
+			SIMP2.applyAction(self.eqn, self.working_mem)
+			return True
+		return False
 
 	def simp3(self):
 		""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """
@@ -783,10 +783,10 @@ class Solver:
 		return False
 
 	def simp5(self):
-		""" if num and denom of a rational polynomial have common factors, then cancel these factors """
-		cond = lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p)
-		action = RatPoly.cancelCommonFactors
-		return self.checkEqnForRule(cond, action)
+		if SIMP5.checkCondition(self.eqn, self.working_mem):
+			SIMP5.applyAction(self.eqn, self.working_mem)
+			return True
+		return False
 
 	def simp6(self):
 		""" if zero exists in a numerator, remove the fraction involved """
