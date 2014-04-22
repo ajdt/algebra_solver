@@ -439,13 +439,13 @@ class EqnRule(object):
 class PolyRule(EqnRule):
 	"""A rule that applies to polynomials. Accepts a single equation and traverses the eqn tree."""
 	def __init__(self, *args): EqnRule.__init__(self, *args)
-	def checkCondition(self, eqn):
+	def checkCondition(self, eqn, working_mem):
 		return self._checkPoly(eqn.left) or self._checkPoly(eqn.right)
-	def applyAction(self, eqn):
+	def applyAction(self, eqn, working_mem):
 		""" apply the rules action to given equation, and return the equation"""
-		eqn.left, changed = self._applyactionrecursive(eqn.left)
+		eqn.left, changed = self._applyActionRecursive(eqn.left)
 		if not changed:
-			eqn.right, changed = self._applyactionrecursive(eqn.left)
+			eqn.right, changed = self._applyActionRecursive(eqn.left)
 		return eqn
 
 	def _checkPoly(self, poly):
