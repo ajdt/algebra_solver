@@ -156,22 +156,26 @@ class SolverRuleTest(unittest.TestCase):
 		self.solver.eqn = Eqn('((x + 1) + 0 )/(x+3)= x+3')
 		# TODO: revised test until string parser works completely
 		self.solver.eqn.left = RatPoly(SumPoly([Eqn.strToPolyTree('x+1'),Eqn.strToPolyTree('0')]), Eqn.strToPolyTree('x+3'))
-		self.assertTrue(self.solver.simp0())
+		self.assertTrue(SIMP0.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP0.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(self.solver.eqn.left, RatPoly(self.sp1, self.sp2))
 
 	def test_simp1(self):
 		self.solver.eqn = Eqn('(x+1)*(x+3) = x + 3')
-		self.assertTrue(self.solver.simp1())
+		self.assertTrue(SIMP1.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP1.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertTrue(self.solver.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO))
 	def test_simp2(self):
 		self.solver.eqn = Eqn('(x+1) + (x+3) = x + 1')
 		# TODO: revised test until string parser works completely
 		self.solver.eqn.left = SumPoly([Eqn.strToPolyTree('x+1'),Eqn.strToPolyTree('x+3')])
-		self.assertTrue(self.solver.simp2())
+		self.assertTrue(SIMP2.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP2.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(self.solver.eqn.left, StdPoly(2*x_symb + 4) )
 	def test_simp3(self):
 		self.solver.eqn = Eqn('3*x + 3 = x +1')
-		self.assertTrue(self.solver.simp3())
+		self.assertTrue(SIMP3.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP3.applyAction(self.solver.eqn, self.solver.working_mem)
 		left = SumPoly([self.sp3, StdPoly(-1*x_symb-3)])
 		right = SumPoly([self.sp1, StdPoly(-3-1*x_symb)])
 		self.assertEqual(str(self.solver.eqn.left), str(left)) # (3x + 2 - x -2 )
@@ -182,23 +186,26 @@ class SolverRuleTest(unittest.TestCase):
 
 		self.solver.eqn = Eqn('(x+1)*(x+3) = (3*x + 3)')
 		prod_poly = Eqn.strToPolyTree('(x+1)*(x+3)') 
-		self.assertTrue( self.solver.simp4())
+		self.assertTrue( SIMP4.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP4.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(self.solver.eqn.left, prod_poly.subtract(self.sp3))
 		self.assertTrue(self.sp3.subtract(self.sp3.copy()))
 	def test_simp5(self):
 		self.solver.eqn = Eqn('(3*x+3)/((x+1)*(3*x+3)) = (x+3)')
-		self.assertTrue(self.solver.simp5())
+		self.assertTrue(SIMP5.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP5.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(self.solver.eqn.left, RatPoly(StdPoly(1, x_symb), self.sp1) )
 
 	def test_mult1(self):
 		self.solver.eqn = Eqn('(x+3) / ((3*x+3)/((x+1)*(3*x+3))) = (x+3)')
-		self.assertTrue(self.solver.mult1())
+		self.assertTrue(MULT1.checkCondition(self.solver.eqn, self.solver.working_mem))
+		MULT1.applyAction(self.solver.eqn, self.solver.working_mem)
 		rp = Eqn.strToPolyTree('(3*x+3)/((x+1)*(3*x+3))')
 		self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp2, rp.reciprocal()]))
 
 	def test_mult2(self):
 		solver = Solver(Eqn('1/(x+1) = 1/(x+3)'))
-		solver.mult2()
+		MULT2.applyAction(solver.eqn, solver.working_mem)
 		# result should be...
 		left, right = Eqn.strToPolyTree('1/(x+1)'), Eqn.strToPolyTree('1/(x+3)')
 		left = ProdPoly([left, ProdPoly([self.sp2, self.sp1]) ])
@@ -210,28 +217,33 @@ class SolverRuleTest(unittest.TestCase):
 	# TODO: test for mult4
 	def test_mult5(self):
 		self.solver.eqn = Eqn('(x+1)*(x+3) = 3*x+3')
-		self.assertTrue(self.solver.mult5())
+		self.assertTrue(MULT5.checkCondition(self.solver.eqn, self.solver.working_mem))
+		MULT5.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(self.solver.eqn.left, StdPoly(1*x_symb**2 + 3*x_symb + 1*x_symb + 3) ) # x^2 + 3x + x + 3
 
 	def test_heur1(self):
 		self.solver.eqn = Eqn('(x**2 + 4*x + 3) = 3*x + 3')
-		self.assertTrue(self.solver.heur1())
+		self.assertTrue(HEUR1.checkCondition(self.solver.eqn, self.solver.working_mem))
+		HEUR1.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp1, self.sp2]))
 
 	def test_heur2(self):
 		self.solver.eqn = Eqn('x**2 + 2*x + 3 = 3*x + 3')
-		self.assertTrue(self.solver.heur2())
+		self.assertTrue(HEUR2.checkCondition(self.solver.eqn, self.solver.working_mem))
+		HEUR2.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(str(self.solver.eqn.left), str(SumPoly([ProdPoly([self.sp1, self.sp1]), StdPoly(2, x_symb)])))
 
 	def test_heur3(self):
 		# factor down to linear terms
 		self.solver.eqn = Eqn('x**3 + x**2 - 9*x - 9 = 3*x + 3')
-		self.assertTrue(self.solver.heur3())
+		self.assertTrue(HEUR3.checkCondition(self.solver.eqn, self.solver.working_mem))
+		HEUR3.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp1, self.sp2, self.sp7]))
 
 		# factor when can't reduce a quadratic term
 		self.solver.eqn = Eqn('x**3 + 5*x**2 + x  + 5 = 3*x+3')
-		self.assertTrue(self.solver.heur3())
+		self.assertTrue(HEUR3.checkCondition(self.solver.eqn, self.solver.working_mem))
+		HEUR3.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp9, self.sp10]))
 
 class RuleHelperTest(unittest.TestCase):

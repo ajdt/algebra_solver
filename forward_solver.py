@@ -427,7 +427,7 @@ class WorkingMem:
 class EqnRule(object):
 	"""A rule that applies at the level of a single equation, and uses working mem"""
 	def __init__(self, cond, action, desc="", name=""):
-		self._cond, self._action, self._desc, self._name = cond, action, desc, name
+		self._cond, self._action, self._desc, self.__name__ = cond, action, desc, name
 	def checkCondition(self, eqn, working_mem):
 		""" @return: true if condition applies"""
 		return self._cond(eqn, working_mem)
@@ -720,7 +720,6 @@ HEUR3 =	PolyRule(lambda p: p.degree() == 3 and isinstance(p, StdPoly) and RuleHe
 									,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """,
 									'heur3'
 									)
-
 class Solver:
 	def __init__(self, eqn): self.eqn, self.working_mem	 = eqn, WorkingMem()
 
@@ -739,147 +738,19 @@ class Solver:
 		# TODO: revisit this rule, it's gotten complex
 		return ( self.eqn.degree() >= 2 and left.isFactored() and right.is_zero and not isinstance(left, SumPoly) and not isinstance(left, RatPoly))
 
-	############################## rules ##############################
-	# structure of recursive rules:
-	def polyRule(self, poly, condition, action):
-		# will return new polynomial and T/F depending on whether action was performed
-		if condition(poly):
-			return (action(poly), True)
-		else:
-			if isinstance(poly, StdPoly):
-				return (poly, False)
-			elif isinstance(poly, RatPoly):
-				new_num, changed = self.polyRule(poly.num, condition, action)
-				if changed:
-					return (RatPoly(new_num, poly.denom), changed)
-				else:
-					new_denom, changed = self.polyRule(poly.denom, condition, action)
-					return (RatPoly(poly.num, new_denom), changed)
-			else : # SumPoly or ProdPoly
-				ls = [self.polyRule(p, condition, action) for p in poly.subpoly]
-				terms, bools = map(lambda x: x[0], ls), map(lambda x: x[1], ls)
-				result = SumPoly(terms) if isinstance(poly, SumPoly) else ProdPoly(terms)
-				return (result, any(bools))
-
-	def checkEqnForRule(self, cond, action):
-		self.eqn.left, changed = self.polyRule(self.eqn.left, cond, action)
-		if not changed:
-			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
-		return changed
-
-	def simp0(self):
-		if SIMP0.checkCondition(self.eqn, self.working_mem):
-			SIMP0.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def simp1(self):
-		if SIMP1.checkCondition(self.eqn, self.working_mem):
-			SIMP1.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def simp2(self):
-		if SIMP2.checkCondition(self.eqn, self.working_mem):
-			SIMP2.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def simp3(self):
-		if SIMP3.checkCondition(self.eqn, self.working_mem):
-			SIMP3.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def simp4(self):
-		if SIMP4.checkCondition(self.eqn, self.working_mem):
-			SIMP4.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def simp5(self):
-		if SIMP5.checkCondition(self.eqn, self.working_mem):
-			SIMP5.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def simp6(self):
-		if SIMP6.checkCondition(self.eqn, self.working_mem):
-			SIMP6.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-	def simp7(self):
-		if SIMP7.checkCondition(self.eqn, self.working_mem):
-			SIMP7.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-	def simp8(self):
-		if SIMP8.checkCondition(self.eqn, self.working_mem):
-			SIMP8.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def simp9(self):
-		if SIMP9.checkCondition(self.eqn, self.working_mem):
-			SIMP9.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def mult1(self):
-		if MULT1.checkCondition(self.eqn, self.working_mem):
-			MULT1.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def mult2(self):
-		if MULT2.checkCondition(self.eqn, self.working_mem):
-			MULT2.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def mult4(self):
-		if MULT4.checkCondition(self.eqn, self.working_mem):
-			MULT4.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def mult5(self):
-		if MULT5.checkCondition(self.eqn, self.working_mem):
-			MULT5.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def heur1(self):
-		if HEUR1.checkCondition(self.eqn, self.working_mem):
-			HEUR1.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def heur2(self):
-		if HEUR2.checkCondition(self.eqn, self.working_mem):
-			HEUR2.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
-	def heur3(self):
-		if HEUR3.checkCondition(self.eqn, self.working_mem):
-			HEUR3.applyAction(self.eqn, self.working_mem)
-			return True
-		return False
-
 	############################## checking and solving ##############################
 	## list of rules and precedences they take
-	SIMP_RULES		= [simp6,simp7, simp8, simp0, simp1, simp2, simp3, simp4, simp5, simp9 ]
+	SIMP_RULES		= [SIMP6,SIMP7, SIMP8, SIMP0, SIMP1, SIMP2, SIMP3, SIMP4, SIMP5, SIMP9 ]
 	WIN_RULES		= [win1, win2, win3]
-	MULT_RULES		= [mult1, mult2, mult4, mult5]
+	MULT_RULES		= [MULT1, MULT2, MULT4, MULT5]
 	MISC_RULES		= []
-	HEURISTICS		= [heur1, heur2, heur3]
+	HEURISTICS		= [HEUR1, HEUR2, HEUR3]
 	ALL_RULES 		= [SIMP_RULES, HEURISTICS, MULT_RULES, MISC_RULES ]
 
 	## solve the problem
 	def solve(self):
 		"""solve the equation given, return steps to the solution"""
-		self.working_mem.addStep( self.eqn, self.solve)
+		self.working_mem.steps.append(str(self.eqn) + ': ' + self.solve.__name__)
 		#print str(self.eqn)
 		while not self.checkWinCond():
 			applied_rule = None
@@ -910,8 +781,8 @@ class Solver:
 	def checkRuleSet(self, ruleset):
 		""" check an argument ruleset"""
 		for rule in ruleset:
-			if rule(self) :
-				#print rule.__doc__
+			if rule.checkCondition(self.eqn, self.working_mem):
+				rule.applyAction(self.eqn, self.working_mem)
 				return rule
 		return None
 
