@@ -614,6 +614,21 @@ class RuleHelper:
 		divisor = eqn.left.coeffOf(Bases.X)
 		eqn.left = StdPoly(x_symb)
 		eqn.right = eqn.right.divide(StdPoly(divisor,x_symb))
+	@staticmethod
+	def mult2Helper(eqn):
+		""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
+		# TODO: remove right.is_zero condition, after fixing the condition that requires moving everything to lhs
+		# TODO: remove the code for checking if rhs is zero, and adjusting likewise
+		# TODO: SIMPLIFY THIS CODE!!
+		# TODO: make atomic, right now does distributive and multiplicative step.
+		# get list of denom from both sides
+		left_denom = [i.denom for i in eqn.left.getFractions()]
+		right_denom = [] if eqn.right.is_zero else [i.denom for i in eqn.right.getFractions()]
+		# compute lcm and multiply
+		lcm = simplifyPolyTerms(RuleHelper.computeLCM(left_denom + right_denom), StdPoly.one(), ProdPoly)
+		left = SumPoly([p.mult(lcm) for p in eqn.left.subpoly]) if isinstance(eqn.left, SumPoly) else eqn.left.mult(lcm)
+		eqn.left = left
+		eqn.right = eqn.right if eqn.right.is_zero else eqn.right.mult(lcm)
 
 ############################## rule specs ##############################	
 # condition, action, description
@@ -662,26 +677,10 @@ MULT1 =	PolyRule(	lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPo
 										lambda p: ProdPoly([p.num, p.denom.reciprocal()]),
 										""" if denom of rational poly is a fraction, the multiply by its reciprocal """
 					)
-# TODO: MULT2 
-
-##def mult2(self):
-##	""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
-##	# TODO: remove right.is_zero condition, after fixing the condition that requires moving everything to lhs
-##	# TODO: remove the code for checking if rhs is zero, and adjusting likewise
-##	# TODO: SIMPLIFY THIS CODE!!
-##	# TODO: make atomic, right now does distributive and multiplicative step.
-##	if self.eqn.left.hasFractions() and  (self.eqn.right.hasFractions() or self.eqn.right.is_zero) :
-##		# get list of denom from both sides
-##		left_denom = [i.denom for i in self.eqn.left.getFractions()]
-##		right_denom = [] if self.eqn.right.is_zero else [i.denom for i in self.eqn.right.getFractions()]
-##		# compute lcm and multiply
-##		lcm = simplifyPolyTerms(RuleHelper.computeLCM(left_denom + right_denom), StdPoly.one(), ProdPoly)
-##		left = SumPoly([p.mult(lcm) for p in self.eqn.left.subpoly]) if isinstance(self.eqn.left, SumPoly) else self.eqn.left.mult(lcm)
-##		self.eqn.left = left
-##		self.eqn.right = self.eqn.right if self.eqn.right.is_zero else self.eqn.right.mult(lcm)
-##		return True
-##	return False
-
+MULT2 =	EqnRule(	lambda eq, wm : eq.left.hasFractions() and  (eq.right.hasFractions() or eq.right.is_zero), 
+										lambda eq,wm : RuleHelper.mult2Helper(eq),
+										""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
+					)
 
 MULT4 =	PolyRule( lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(p.getFractions()) > 1,
 										RuleHelper.mult4Helper,
@@ -707,29 +706,6 @@ HEUR3 =	PolyRule(lambda p: p.degree() == 3 and isinstance(p, StdPoly) and RuleHe
 									,lambda p : RuleHelper.factorCubic(p)[0]
 									,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """
 									)
-##def simp7(self):
-##	""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """
-##	if isinstance(self.eqn.left, RatPoly) and self.eqn.right.is_zero:
-##		self.eqn.left = self.eqn.left.num
-##		return True
-##	return False
-##def simp8(self):
-##	""" if equation has form ax = b, divide by a """
-##	right, left = self.eqn.right, self.eqn.left
-##	if right.isConstTerm() and left.is_linear and left.coeffOf(Bases.X) != 1 and left.coeffOf(Bases.CONST) is None:
-##		divisor = left.coeffOf(Bases.X)
-##		self.eqn.left = StdPoly(x_symb)
-##		self.eqn.right = self.eqn.right.divide(StdPoly(divisor,x_symb))
-##		return True
-##	else:
-##		return False
-
-##def simp9(self):
-##	""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal"""
-##	if self.eqn.degree() < 2 and self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
-##		self.working_mem.removeGoal(WorkingMem.SET_RHS_ZERO)
-##		return True
-##	return False
 
 class Solver:
 	def __init__(self, eqn): self.eqn, self.working_mem	 = eqn, WorkingMem()
