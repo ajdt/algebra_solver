@@ -590,6 +590,22 @@ class RuleHelper:
 	def mult5Helper(prod_poly):
 		new_terms = [ProdPoly.foil(prod_poly.subpoly[0], prod_poly.subpoly[1]) ] + prod_poly.subpoly[2:]
 		return simplifyPolyTerms(new_terms, StdPoly.zero(), ProdPoly)
+	@staticmethod
+	def getRHSNonConstLHSConst(eqn):
+		right, left = eqn.right, eqn.left
+		to_remove = right.getNonConstTerms() + left.getConstTerms()
+		to_remove = [p for p in to_remove if not p.is_zero] # remove all zero terms
+		return to_remove
+	@staticmethod
+	def moveConstRHSNonConstLHS(eqn):
+		to_remove = RuleHelper.getRHSNonConstLHSConst(eqn)
+		remove_poly =  simplifyPolyTerms(to_remove, StdPoly.zero(), SumPoly)
+		# subtract the terms from both sides
+		eqn.left, eqn.right  = eqn.left.subtract(remove_poly), eqn.right.subtract(remove_poly)
+	@staticmethod
+	def subtractFromEqn(eqn, poly):
+		eqn.right = eqn.right.subtract(poly)
+		eqn.left = eqn.left.subtract(poly)
 
 ############################## rule specs ##############################	
 # condition, action, description
@@ -597,7 +613,6 @@ SIMP0 =	PolyRule(	lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in 
 										RuleHelper._removeZeroes,
 										""" simp0: if zeroes exist as additive terms, then remove them """
 					)
-# TODO: SIMP1
 SIMP1 =	EqnRule(	lambda eq, wm : eq.degree() >= 2 and not wm.hasGoal(WorkingMem.SET_RHS_ZERO),
 					lambda eq, wm : wm.addGoal(WorkingMem.SET_RHS_ZERO),
 					""" simp1: if degree is >= 2, then set working mem goal to make rhs zero """
@@ -606,8 +621,14 @@ SIMP2 =	PolyRule(	lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x
 										SumPoly.sumCommonTerms,
 										""" simp2: if sumpoly has common terms, then add them together """
 					)
-# TODO: SIMP3
-# TODO: SIMP4
+SIMP3 =	EqnRule(	lambda eq, wm : not wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.isConstTerm() and len(RuleHelper.getRHSNonConstLHSConst(eq)) > 0,
+					lambda eq, wm : RuleHelper.moveConstRHSNonConstLHS(eqn),
+					""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """
+					)
+SIMP4 =	EqnRule(	lambda eq, wm : wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.is_zero,
+					lambda eq, wm : RuleHelper.subtractFromEqn(eqn, eqn.right),
+					""" if our goal is to set rhs to zero, then subtract all rhs terms from lhs"""
+					)
 SIMP5 =	PolyRule(	lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p), 
 										RatPoly.cancelCommonFactors,
 										""" simp5: if num and denom of a rational polynomial have common factors, then cancel these factors """
