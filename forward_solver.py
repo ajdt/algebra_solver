@@ -282,7 +282,6 @@ class RatPoly(CorePoly):
 class Bases: # used as an enum
 	CONST, X, X2, X3 = range(4)
 
-
 class StdPoly(sp.Poly, CorePoly):
 	def __init__(self, *args):
 		sp.Poly.__init__(self, *args)
@@ -427,8 +426,8 @@ class WorkingMem:
 
 class EqnRule(object):
 	"""A rule that applies at the level of a single equation, and uses working mem"""
-	def __init__(self, cond, action, desc=""):
-		self._cond, self._action, self._desc = cond, action, desc
+	def __init__(self, cond, action, desc="", name=""):
+		self._cond, self._action, self._desc, self._name = cond, action, desc, name
 	def checkCondition(self, eqn, working_mem):
 		""" @return: true if condition applies"""
 		return self._cond(eqn, working_mem)
@@ -633,76 +632,93 @@ class RuleHelper:
 # condition, action, description
 SIMP0 =	PolyRule(	lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in x.subpoly]), 
 										RuleHelper._removeZeroes,
-										""" simp0: if zeroes exist as additive terms, then remove them """
+										""" simp0: if zeroes exist as additive terms, then remove them """,
+										'simp0'
 					)
 SIMP1 =	EqnRule(	lambda eq, wm : eq.degree() >= 2 and not wm.hasGoal(WorkingMem.SET_RHS_ZERO),
 					lambda eq, wm : wm.addGoal(WorkingMem.SET_RHS_ZERO),
-					""" simp1: if degree is >= 2, then set working mem goal to make rhs zero """
+					""" simp1: if degree is >= 2, then set working mem goal to make rhs zero """,
+					'simp1'
 					)
 SIMP2 =	PolyRule(	lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x), 
 										SumPoly.sumCommonTerms,
-										""" simp2: if sumpoly has common terms, then add them together """
+										""" simp2: if sumpoly has common terms, then add them together """,
+										'simp2'
 					)
 SIMP3 =	EqnRule(	lambda eq, wm : not wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.isConstTerm() and len(RuleHelper.getRHSNonConstLHSConst(eq)) > 0,
 					lambda eq, wm : RuleHelper.moveConstRHSNonConstLHS(eq),
-					""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """
+					""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """,
+					'simp3'
 					)
 SIMP4 =	EqnRule(	lambda eq, wm : wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.is_zero,
 					lambda eq, wm : RuleHelper.subtractFromEqn(eq, eq.right),
-					""" if our goal is to set rhs to zero, then subtract all rhs terms from lhs"""
+					""" if our goal is to set rhs to zero, then subtract all rhs terms from lhs""",
+					'simp4'
 					)
 SIMP5 =	PolyRule(	lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p), 
 										RatPoly.cancelCommonFactors,
-										""" simp5: if num and denom of a rational polynomial have common factors, then cancel these factors """
+										""" simp5: if num and denom of a rational polynomial have common factors, then cancel these factors """,
+										'simp5'
 					)
 SIMP6 =	PolyRule(	lambda x : isinstance(x, RatPoly) and x.num.is_zero , 
 										lambda x : StdPoly.zero(),
-										""" simp6: if zero exists in a numerator, remove the fraction involved """
+										""" simp6: if zero exists in a numerator, remove the fraction involved """,
+										'simp6'
 					)
 SIMP7 =	EqnRule(	lambda eq, wm : isinstance(eq.left, RatPoly) and eq.right.is_zero, 
 										lambda eq,wm : RuleHelper.setLHSToNum(eq),
-										""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """
+										""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """,
+										'simp7'
 					)
 SIMP8 =	EqnRule(	lambda eq, wm : eq.right.isConstTerm() and eq.left.is_linear and eq.left.coeffOf(Bases.X) != 1 and eq.left.coeffOf(Bases.CONST) is None, 
 										lambda eq,wm : RuleHelper.simp8Helper(eq),
-										""" if equation has form ax = b, divide by a """
+										""" if equation has form ax = b, divide by a """,
+										'simp8'
 					)
 SIMP9 =	EqnRule(	lambda eq, wm : eq.degree() < 2 and wm.hasGoal(WorkingMem.SET_RHS_ZERO), 
 										lambda eq,wm : wm.removeGoal(WorkingMem.SET_RHS_ZERO),
-										""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal"""
+										""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal""",
+										'simp9'
 					)
 
 MULT1 =	PolyRule(	lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly), 
 										lambda p: ProdPoly([p.num, p.denom.reciprocal()]),
-										""" if denom of rational poly is a fraction, the multiply by its reciprocal """
+										""" if denom of rational poly is a fraction, the multiply by its reciprocal """,
+										'mult1'
 					)
 MULT2 =	EqnRule(	lambda eq, wm : eq.left.hasFractions() and  (eq.right.hasFractions() or eq.right.is_zero), 
 										lambda eq,wm : RuleHelper.mult2Helper(eq),
-										""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
+										""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """,
+										'mult2'
 					)
 MULT4 =	PolyRule( lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(p.getFractions()) > 1,
 										RuleHelper.mult4Helper,
-										""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm"""
+										""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm""",
+										'mult4'
 									)
 
 MULT5 =	PolyRule(lambda p: isinstance(p, ProdPoly),
 									RuleHelper.mult5Helper,
-									""" if a there is a product polynomial, then foil the first two factors"""
+									""" if a there is a product polynomial, then foil the first two factors""",
+									'mult5'
 									)
 
 HEUR1 =	PolyRule(lambda p:  isinstance(p, StdPoly) and p.degree() == 2 and isinstance(p.factor(x_symb), sp.Mul) # TODO: look for is_factorable() method
 									,lambda p : RuleHelper.factor(p)[0]
-									,""" if a 2nd degree polynomial occurs anywhere, then attempt to factor it """
+									,""" if a 2nd degree polynomial occurs anywhere, then attempt to factor it """,
+									'heur1'
 									)
 
 HEUR2 =	PolyRule(lambda p: isinstance(p, StdPoly) and p.degree() == 2 and RuleHelper.completeSquare(p)[1]
 									,lambda p : RuleHelper.completeSquare(p)[0]
-									,""" if a 2nd degree polynomial occurs anywhere, then factor it by completing the square """
+									,""" if a 2nd degree polynomial occurs anywhere, then factor it by completing the square """,
+									'heur2'
 									)
 
 HEUR3 =	PolyRule(lambda p: p.degree() == 3 and isinstance(p, StdPoly) and RuleHelper.factorCubic(p)[1]
 									,lambda p : RuleHelper.factorCubic(p)[0]
-									,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """
+									,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """,
+									'heur3'
 									)
 
 class Solver:
