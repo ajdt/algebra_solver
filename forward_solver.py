@@ -482,7 +482,6 @@ class PolyRule(EqnRule):
 				result = SumPoly(terms) if isinstance(poly, SumPoly) else ProdPoly(terms)
 				return (result, any(bools))
 		
-		
 class RuleHelper:
 	""" contains mostly static methods to help rules operate on polys"""
 	@staticmethod
@@ -645,7 +644,7 @@ SIMP2 =	PolyRule(	lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x
 										""" simp2: if sumpoly has common terms, then add them together """
 					)
 SIMP3 =	EqnRule(	lambda eq, wm : not wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.isConstTerm() and len(RuleHelper.getRHSNonConstLHSConst(eq)) > 0,
-					lambda eq, wm : RuleHelper.moveConstRHSNonConstLHS(eqn),
+					lambda eq, wm : RuleHelper.moveConstRHSNonConstLHS(eq),
 					""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """
 					)
 SIMP4 =	EqnRule(	lambda eq, wm : wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.is_zero,
@@ -681,7 +680,6 @@ MULT2 =	EqnRule(	lambda eq, wm : eq.left.hasFractions() and  (eq.right.hasFracti
 										lambda eq,wm : RuleHelper.mult2Helper(eq),
 										""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
 					)
-
 MULT4 =	PolyRule( lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(p.getFractions()) > 1,
 										RuleHelper.mult4Helper,
 										""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm"""
@@ -777,18 +775,8 @@ class Solver:
 		return False
 
 	def simp3(self):
-		""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """
-		left, right = self.eqn.left, self.eqn.right
-		# TODO: may have to fix when this rule fires, what if we have x+3 = 2, can't proceed
-		if not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO) and not right.isConstTerm():
-			to_remove = right.getNonConstTerms() + left.getConstTerms()
-			to_remove = [p for p in to_remove if not p.is_zero] # remove all zero terms
-			if len(to_remove) == 0:
-				return False
-			else:
-				remove_poly =  simplifyPolyTerms(to_remove, StdPoly.zero(), SumPoly)
-			# subtract the terms from both sides
-			self.eqn.left, self.eqn.right  = self.eqn.left.subtract(remove_poly), self.eqn.right.subtract(remove_poly)
+		if SIMP3.checkCondition(self.eqn, self.working_mem):
+			SIMP3.applyAction(self.eqn, self.working_mem)
 			return True
 		return False
 
