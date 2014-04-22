@@ -431,10 +431,10 @@ class EqnRule(object):
 		self._cond, self._action, self._desc = cond, action, desc
 	def checkCondition(self, eqn, working_mem):
 		""" @return: true if condition applies"""
-		return self._cond(eqn)
+		return self._cond(eqn, working_mem)
 	def applyAction(self, eqn, working_mem):
 		""" Apply given action to eqn. NOTE: Assumed eqn is mutable; nothing is returned."""
-		self._action(eqn)
+		self._action(eqn, working_mem)
 
 class PolyRule(EqnRule):
 	"""A rule that applies to polynomials. Accepts a single equation and traverses the eqn tree."""
@@ -598,6 +598,10 @@ SIMP0 =	PolyRule(	lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in 
 										""" simp0: if zeroes exist as additive terms, then remove them """
 					)
 # TODO: SIMP1
+SIMP1 =	EqnRule(	lambda eq, wm : eq.degree() >= 2 and not wm.hasGoal(WorkingMem.SET_RHS_ZERO),
+					lambda eq, wm : wm.addGoal(WorkingMem.SET_RHS_ZERO),
+					""" simp1: if degree is >= 2, then set working mem goal to make rhs zero """
+					)
 SIMP2 =	PolyRule(	lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x), 
 										SumPoly.sumCommonTerms,
 										""" simp2: if sumpoly has common terms, then add them together """
@@ -746,9 +750,8 @@ class Solver:
 		return False
 
 	def simp1(self):
-		""" if degree is >= 2, then set working mem goal to make rhs zero """
-		if self.eqn.degree() >= 2 and not self.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO):
-			self.working_mem.addGoal(WorkingMem.SET_RHS_ZERO)
+		if SIMP1.checkCondition(self.eqn, self.working_mem):
+			SIMP1.applyAction(self.eqn, self.working_mem)
 			return True
 		return False
 
