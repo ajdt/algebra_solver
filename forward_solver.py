@@ -751,11 +751,6 @@ class Solver:
 			self.eqn.right, changed = self.polyRule(self.eqn.right, cond, action)
 		return changed
 
-	@staticmethod
-	def _removeZeroes(sum_poly):
-		no_zeroes = [p for p in sum_poly.subpoly if not p.is_zero ]
-		return simplifyPolyTerms(no_zeroes, StdPoly.zero(), SumPoly)
-
 	def simp0(self):
 		if SIMP0.checkCondition(self.eqn, self.working_mem):
 			SIMP0.applyAction(self.eqn, self.working_mem)
@@ -826,43 +821,11 @@ class Solver:
 			return True
 		return False
 
-	@staticmethod
-	def removeFactorsFrom(factor, remove_from):
-		"""
-		return a new list with the given polynomial removed
-		"""
-		new_list = list(remove_from)
-		if isinstance(factor, ProdPoly):
-			for p in factor.subpoly:
-				new_list.remove(p)
-		else :
-			new_list.remove(factor)
-		return new_list
-
-	@staticmethod
-	def mult4Helper(sum_poly):
-		lcm = Solver.computeLCM( [ i.denom for i in sum_poly.getFractions() ])
-		ls = []
-		# multiply all fractions to get a common denominator
-		for poly in sum_poly.subpoly:
-			if isinstance(poly, RatPoly): # compute the correct multiplier to get common denominator
-				multiplier = simplifyPolyTerms( Solver.removeFactorsFrom(poly.denom, lcm), StdPoly.one(), ProdPoly )
-				mult_frac = RatPoly(multiplier, multiplier.copy())
-				ls.append(poly.mult(mult_frac))
-			else:
-				ls.append(poly)
-		return SumPoly(ls)
-
 	def mult4(self):
 		if MULT4.checkCondition(self.eqn, self.working_mem):
 			MULT4.applyAction(self.eqn, self.working_mem)
 			return True
 		return False
-
-	@staticmethod
-	def mult5Helper(prod_poly):
-		new_terms = [ProdPoly.foil(prod_poly.subpoly[0], prod_poly.subpoly[1]) ] + prod_poly.subpoly[2:]
-		return simplifyPolyTerms(new_terms, StdPoly.zero(), ProdPoly)
 
 	def mult5(self):
 		if MULT5.checkCondition(self.eqn, self.working_mem):
@@ -887,78 +850,6 @@ class Solver:
 			HEUR3.applyAction(self.eqn, self.working_mem)
 			return True
 		return False
-
-	@staticmethod
-	def computeLCM( poly_list):
-		"""
-		compute the lcm of a list of fractions
-		@return: list of polynomials in the lcm
-		"""
-		# TODO: overly complex, simplify
-		terms = []
-		for p in poly_list:
-			if isinstance(p, ProdPoly):
-				for subpoly in p.subpoly:
-					num_p = len([x for x in p.subpoly if x == subpoly])
-					num_terms = len([x for x in terms if x == subpoly])
-					# if subpoly occurs in p more times than already
-					# accounted for, then include it until we have
-					# enough multiples
-					if num_p > num_terms:
-						for i in range(num_p - num_terms):
-							terms.append(subpoly)
-			elif p not in terms:
-				terms.append(p)
-
-		return terms
-
-
-	@staticmethod
-	def completeSquare(std_poly):
-		if not isinstance(std_poly, StdPoly):
-			raise TypeError
-		# TODO: for now assumes a = 1, to avoid fractions
-		d = std_poly.coeff_monomial(x_symb)**2/4 # take coeff attached to x term
-		c = std_poly.coeff_monomial(x_symb**0) # coef of constant term
-		poly = (std_poly - c + d).factor()
-		if isinstance(poly, sp.Pow): # factoring was successful
-			factor = StdPoly(poly.args[0])
-			return (SumPoly([ProdPoly([factor, factor.copy()]), StdPoly(c - d, x_symb)]), True)
-		else:
-			return (std_poly, False)
-
-	@staticmethod
-	def factorCubic(std_poly):
-		"""
-		factors a sumpoly that is in standard form
-		@return: (factored_poly, True) otherwise (original_poly, False)
-		XXX: assumes poly is in standard form
-		"""
-		if not isinstance(std_poly, StdPoly):
-			raise TypeError
-
-		poly = std_poly.factor()
-		if isinstance(poly, sp.Mul): # factoring was successful
-			return (ProdPoly([StdPoly(p) for p in poly.args]), True)
-		else:
-			return (std_poly, False)
-
-	@staticmethod
-	def factor(std_poly):
-		"""
-		factors a standard poly
-		@return: (factored_poly, True) otherwise (original_poly, False)
-		XXX: assumes poly is in standard form
-		"""
-		# TODO: remove boolean return value
-		if not isinstance(std_poly, StdPoly):
-			raise TypeError
-
-		poly = std_poly.factor()
-		if isinstance(poly, sp.Mul): # factoring was successful
-			return (ProdPoly([ StdPoly(p, x_symb) for p in poly.args ]), True)
-		else:
-			return (std_poly, False)
 
 	############################## checking and solving ##############################
 	## list of rules and precedences they take

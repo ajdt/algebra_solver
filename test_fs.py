@@ -234,12 +234,11 @@ class SolverRuleTest(unittest.TestCase):
 		self.assertTrue(self.solver.heur3())
 		self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp9, self.sp10]))
 
-class SolverUtilTest(unittest.TestCase):
+class RuleHelperTest(unittest.TestCase):
 	def test_computeLCM(self):
 		sp1, sp2 = StdPoly(x_symb + 3), StdPoly(x_symb + 2)
-		solver = Solver(Eqn('x+3 = x + 2'))
-		self.assertEqual( ProdPoly( solver.computeLCM([sp1, sp2]) ), ProdPoly([sp1, sp2]))
-		self.assertEqual(solver.computeLCM([sp1, sp1.copy()]), [sp1])
+		self.assertEqual( ProdPoly( RuleHelper.computeLCM([sp1, sp2]) ), ProdPoly([sp1, sp2]))
+		self.assertEqual(RuleHelper.computeLCM([sp1, sp1.copy()]), [sp1])
 
 #pdb.set_trace()
 
