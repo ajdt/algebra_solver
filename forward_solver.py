@@ -798,6 +798,7 @@ class Solver:
 class SuperSolver():
 	def __init__(self, eqn_str):
 		self.eqn = Eqn(eqn_str)
+		self.steps_tried = set()
 
 	def allSolns(self):
 		solutions = []
@@ -816,9 +817,11 @@ class SuperSolver():
 				continue
 			for rule in triggered_rules:
 				new_solver = soln.copy()
-				rule.applyAction(new_solver.eqn, new_solver.working_mem)
-				new_solver.working_mem.addStep(new_solver.eqn, rule)
-				solvers.append(new_solver)
+				if (str(new_solver.eqn), rule.__name__) not in self.steps_tried:
+					self.steps_tried.add((str(new_solver.eqn), rule.__name__)) # remember what you've tried to do
+					rule.applyAction(new_solver.eqn, new_solver.working_mem)
+					new_solver.working_mem.addStep(new_solver.eqn, rule)
+					solvers.append(new_solver)
 		return solutions
 
 # Notes:
@@ -834,3 +837,14 @@ class SuperSolver():
 # strict hierarchy, or limit to tree depth
 #
 # python to run specific tests: python -m unittest test_fs.SampleCasesTest.test_solve2
+
+# causes infinite loop: 3*x**2/(x+1) = 0
+solver = Solver(Eqn('3*x**2 = 0'))
+for step in solver.solve():
+	print step
+
+print 'hot dog'
+soln_gen = SuperSolver('3*x**2 = 0')
+for soln in soln_gen.allSolns():
+	print soln
+
