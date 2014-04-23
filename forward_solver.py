@@ -289,6 +289,7 @@ class StdPoly(sp.Poly, CorePoly):
 	# UTILITY FUNCTIONS
 	def coef(self): return self.coeffs()[0] # TODO: remove this, temporary while refactoring takes place
 	def __str__(self): return str(self.as_expr()).replace('x_symb', 'x') # don't like how sp.Poly prints polynomials
+	def copy(self): return StdPoly(self.as_expr(), x_symb) # TODO: only way to have constants make copies of themselves since I can't pass generator through Poly.copy() method
 
 	# BOOLEANS
 	def hasFractions(self): return False
@@ -301,7 +302,7 @@ class StdPoly(sp.Poly, CorePoly):
 		same_terms = lambda x, y: x is not None and y is not None and x != 0 and y != 0
 		return  any(map(same_terms, my_coeffs, other_coeffs))
 
-	def coeffOf(self, base): return self.coeffs()[0] if base == self.degree() else None # TODO: revise this too
+	def coeffOf(self, base): return self.coeffs()[0] if base == self.degree() else None # TODO: revise this to return self.coeff_monomial(x_symb**base), causes bugs to crop up
 
 	# MISC HELPERS
 	@staticmethod
@@ -335,7 +336,11 @@ class Eqn:
 
 	def __str__(self):
 		return str(self.left) + '=' + str(self.right)
-	def copy(self): return Eqn(self.left.copy(), self.right.copy())
+	def copy(self): 
+		new_eqn = Eqn('3*x = 2')
+		new_eqn.left  = self.left.copy()
+		new_eqn.right = self.right.copy()
+		return new_eqn
 	def degree(self): return max([self.left.degree(), self.right.degree()])
 
 	@staticmethod
@@ -409,6 +414,13 @@ class WorkingMem:
 		self.backtrack_stack = []
 		self.steps = []
 		self.goals = []
+	def copy(self):
+		new_wm = WorkingMem(self.steps_in_latex)
+		new_wm.backtrack_stack = list(self.backtrack_stack)
+		new_wm.steps = list(self.steps)
+		new_wm.goals = list(self.goals)
+		return new_wm
+
 	def hasGoal(self, goal): return goal in self.goals
 	def addGoal(self, goal): self.goals.append(goal)
 	def removeGoal(self, goal): self.goals.remove(goal)
@@ -718,8 +730,15 @@ HEUR3 =	PolyRule(lambda p: p.degree() == 3 and isinstance(p, StdPoly) and RuleHe
 									'heur3'
 				)
 class Solver:
-	def __init__(self, eqn): self.eqn, self.working_mem	 = eqn, WorkingMem()
+	def __init__(self, eqn, rule_ord=lambda rule: Solver.RULE_ORDERING.index(rule)): 
+		self.eqn, self.working_mem	= eqn, WorkingMem()
+		self.rule_ordering			= rule_ord
 
+	def __str__(self): return '\n'.join(self.working_mem.steps)
+	def copy(self):
+		new_solver = Solver(self.eqn.copy())
+		new_solver.working_mem = self.working_mem.copy()
+		return new_solver
 	############################## win conditions  ##############################
 	def win1(self): # """ case a = b"""
 		""" contradiction:  reduced to a = b, but a =/= b """
@@ -749,10 +768,13 @@ class Solver:
 	def solve(self):
 		"""solve the equation given, return steps to the solution"""
 		self.working_mem.steps.append(str(self.eqn) + ': ' + self.solve.__name__)
-		#print str(self.eqn)
 		while not self.checkWinCond():
-			applied_rule = self.selectRule( self.getTriggeredRules() )
+			triggered_rules = self.getTriggeredRules()
+			if len(triggered_rules) == 0 : # stuck, there's no more todo
+				break
 
+			# select a rule and apply it
+			applied_rule = self.selectRule(triggered_rules)
 			applied_rule.applyAction(self.eqn, self.working_mem)
 			self.working_mem.addStep(self.eqn, applied_rule) 
 		return self.working_mem.steps
@@ -771,9 +793,33 @@ class Solver:
 		"""@return: list of all rules triggered by current game state"""
 		return [ rule for rule in Solver.RULE_ORDERING if rule.checkCondition(self.eqn, self.working_mem) ]
 
-	# TODO: don't like how this is written
-	def selectRule(self, triggered_rules):
-		return min(triggered_rules, key=lambda rule: Solver.RULE_ORDERING.index(rule))
+	def selectRule(self, triggered_rules): return min(triggered_rules, key=self.rule_ordering)
+
+class SuperSolver():
+	def __init__(self, eqn_str):
+		self.eqn = Eqn(eqn_str)
+
+	def allSolns(self):
+		solutions = []
+		solvers = [Solver(self.eqn)]
+		pdb.set_trace()
+		while len(solvers) > 0:
+			# take the top solver
+			soln = solvers.pop()
+			# if finished solving, add it's solution
+			if soln.checkWinCond():
+				solutions.append(soln.working_mem.steps)
+				continue
+			# ... otherwise generate a solver for each triggered rule and apply the rule
+			triggered_rules = soln.getTriggeredRules()
+			if len(triggered_rules) == 0: # deadend, no solution down this path
+				continue
+			for rule in triggered_rules:
+				new_solver = soln.copy()
+				rule.applyAction(new_solver.eqn, new_solver.working_mem)
+				new_solver.working_mem.addStep(new_solver.eqn, rule)
+				solvers.append(new_solver)
+		return solutions
 
 # Notes:
 #	all/any for reducing a list of booleans
