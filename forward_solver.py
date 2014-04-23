@@ -16,7 +16,7 @@ def simplifyPolyTerms(term_list, default, constructor):
 	else:
 		return constructor(term_list)
 def mergeLists(list_of_lists):
-	return reduce(lambda x, y: x + y, list_of_lists)
+	return reduce(lambda x, y: x + y, list_of_lists, [])
 
 class CorePoly(object):
 	"""basic polynomial, mostly contains code to be overridden"""
@@ -402,7 +402,6 @@ class Eqn:
 		eqn.left = Eqn.genRandTree()
 		return eqn
 
-
 class WorkingMem:
 	SET_RHS_ZERO = 'set rhs zero'
 	def __init__(self, steps_in_latex=False):
@@ -628,8 +627,8 @@ class RuleHelper:
 		eqn.left = left
 		eqn.right = eqn.right if eqn.right.is_zero else eqn.right.mult(lcm)
 
-############################## rule specs ##############################	
-# condition, action, description
+############################## RULES ##############################	
+# condition, action, description, name
 SIMP0 =	PolyRule(	lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in x.subpoly]), 
 										RuleHelper._removeZeroes,
 										""" simp0: if zeroes exist as additive terms, then remove them """,
@@ -680,7 +679,6 @@ SIMP9 =	EqnRule(	lambda eq, wm : eq.degree() < 2 and wm.hasGoal(WorkingMem.SET_R
 										""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal""",
 										'simp9'
 					)
-
 MULT1 =	PolyRule(	lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly), 
 										lambda p: ProdPoly([p.num, p.denom.reciprocal()]),
 										""" if denom of rational poly is a fraction, the multiply by its reciprocal """,
@@ -696,7 +694,6 @@ MULT4 =	PolyRule( lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(
 										""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm""",
 										'mult4'
 									)
-
 MULT5 =	PolyRule(lambda p: isinstance(p, ProdPoly),
 									RuleHelper.mult5Helper,
 									""" if a there is a product polynomial, then foil the first two factors""",
@@ -719,7 +716,7 @@ HEUR3 =	PolyRule(lambda p: p.degree() == 3 and isinstance(p, StdPoly) and RuleHe
 									,lambda p : RuleHelper.factorCubic(p)[0]
 									,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """,
 									'heur3'
-									)
+				)
 class Solver:
 	def __init__(self, eqn): self.eqn, self.working_mem	 = eqn, WorkingMem()
 
@@ -746,6 +743,7 @@ class Solver:
 	MISC_RULES		= []
 	HEURISTICS		= [HEUR1, HEUR2, HEUR3]
 	ALL_RULES 		= [SIMP_RULES, HEURISTICS, MULT_RULES, MISC_RULES ]
+	RULE_ORDERING 	= SIMP_RULES + HEURISTICS + MULT_RULES + MISC_RULES 
 
 	## solve the problem
 	def solve(self):
@@ -753,19 +751,10 @@ class Solver:
 		self.working_mem.steps.append(str(self.eqn) + ': ' + self.solve.__name__)
 		#print str(self.eqn)
 		while not self.checkWinCond():
-			applied_rule = None
-			for ruleset in self.ALL_RULES :
-				applied_rule = self.checkRuleSet(ruleset)
-				if applied_rule is not None:
-					self.working_mem.addStep(self.eqn, applied_rule) # str indicating what rule was used
-					#print self.working_mem.steps[-1]
-					break
-			if applied_rule is None:
-				#print " no rules applied "
-				break
-		# print solution and then return it
-		#for p in self.working_mem.steps :
-			#print p
+			applied_rule = self.selectRule( self.getTriggeredRules() )
+
+			applied_rule.applyAction(self.eqn, self.working_mem)
+			self.working_mem.addStep(self.eqn, applied_rule) 
 		return self.working_mem.steps
 
 	def checkWinCond(self):
@@ -778,14 +767,13 @@ class Solver:
 				return True
 		return False
 
-	def checkRuleSet(self, ruleset):
-		""" check an argument ruleset"""
-		for rule in ruleset:
-			if rule.checkCondition(self.eqn, self.working_mem):
-				rule.applyAction(self.eqn, self.working_mem)
-				return rule
-		return None
+	def getTriggeredRules(self):
+		"""@return: list of all rules triggered by current game state"""
+		return [ rule for rule in Solver.RULE_ORDERING if rule.checkCondition(self.eqn, self.working_mem) ]
 
+	# TODO: don't like how this is written
+	def selectRule(self, triggered_rules):
+		return min(triggered_rules, key=lambda rule: Solver.RULE_ORDERING.index(rule))
 
 # Notes:
 #	all/any for reducing a list of booleans
