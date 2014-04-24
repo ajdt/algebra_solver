@@ -181,7 +181,7 @@ class ProdPoly(CorePoly):
 		new_terms = []
 		for p in terms1:
 			for q in terms2:
-				if isinstance(p, StdPoly) and isinstance(p, StdPoly):
+				if isinstance(p, StdPoly) and isinstance(q, StdPoly):
 					new_terms.append(p * q)
 				else:
 					new_terms.append(p.mult(q))
@@ -833,6 +833,9 @@ class SuperSolver():
 		while len(solvers) > 0:
 			# take the top solver
 			soln = solvers.pop()
+			for s in soln.working_mem.steps:
+				print s
+			print "##############################"
 			# if finished solving, add it's solution
 			if soln.checkWinCond():
 				solutions.append(soln.working_mem.steps)
@@ -867,15 +870,15 @@ class SuperSolver():
 # causes infinite loop: 3*x**2/(x+1) = 0
 
 # issues: zero not returning as a constant term
-solver = Solver(Eqn('3*x**2 - 5= 0'))
+solver = Solver(Eqn('3*x**2/(x+1) = 0'))
 pdb.set_trace()
 applied = HEUR4.checkCondition(solver.eqn, solver.working_mem)
 HEUR4.applyAction(solver.eqn, solver.working_mem)
 SIMP3.checkCondition(solver.eqn, solver.working_mem)
 SIMP3.applyAction(solver.eqn, solver.working_mem)
-#
+
 print 'hot dog'
-soln_gen = SuperSolver('3*x**2 - 5= 0')
+soln_gen = SuperSolver('3*x**2/(x+1) = 0')
 for soln in soln_gen.allSolns():
 	print soln
 
