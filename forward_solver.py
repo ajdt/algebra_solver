@@ -638,6 +638,23 @@ class RuleHelper:
 		left = SumPoly([p.mult(lcm) for p in eqn.left.subpoly]) if isinstance(eqn.left, SumPoly) else eqn.left.mult(lcm)
 		eqn.left = left
 		eqn.right = eqn.right if eqn.right.is_zero else eqn.right.mult(lcm)
+	@staticmethod
+	def heur4Helper(std_poly):
+		"""
+		factors a poly of the form a*x**2 - b
+		@return: (factored_poly, True) otherwise (original_poly, False)
+		XXX: assumes poly is in standard form
+		"""
+		# TODO: refactor conversion to ProdPoly (repeated in factor() function
+		if not isinstance(std_poly, StdPoly):
+			raise TypeError
+
+		a, c = std_poly.coeff_monomial(x_symb**2), std_poly.coeff_monomial(x_symb**0)
+		poly = std_poly.factor(extension=sp.sqrt(abs(c))/sp.sqrt(a))
+		if isinstance(poly, sp.Mul): # factoring was successful
+			return (ProdPoly([ StdPoly(p, x_symb) for p in poly.args ]), True)
+		else:
+			return (std_poly, False)
 
 ############################## RULES ##############################	
 # condition, action, description, name
@@ -731,6 +748,13 @@ HEUR3 =	PolyRule(lambda p: p.degree() == 3 and isinstance(p, StdPoly) and RuleHe
 									,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """,
 									'heur3'
 				)
+
+# TODO: see if this rule can be written with other fraction rules
+HEUR4 =	PolyRule(lambda p:  isinstance(p, StdPoly) and p.degree() == 2 and p.coeff_monomial(x_symb)==0 and p.coeff_monomial(x_symb**0) < 0	 # TODO: look for is_factorable() method
+									,lambda p : RuleHelper.heur4Helper(p)[0]
+									,""" if a polynomial of the form ax**2 -b occurs anywhere, then factor it as (x + sqrt(a/b)) (x - sqrt(a/b)) """,
+									'heur4'
+									)
 class Solver:
 	def __init__(self, eqn, rule_ord=lambda rule: Solver.RULE_ORDERING.index(rule)): 
 		self.eqn, self.working_mem	= eqn, WorkingMem()
@@ -762,7 +786,7 @@ class Solver:
 	WIN_RULES		= [win1, win2, win3]
 	MULT_RULES		= [MULT1, MULT2, MULT4, MULT5]
 	MISC_RULES		= []
-	HEURISTICS		= [HEUR1, HEUR2, HEUR3]
+	HEURISTICS		= [HEUR1, HEUR2, HEUR3, HEUR4]
 	ALL_RULES 		= [SIMP_RULES, HEURISTICS, MULT_RULES, MISC_RULES ]
 	RULE_ORDERING 	= SIMP_RULES + HEURISTICS + MULT_RULES + MISC_RULES 
 
@@ -843,12 +867,12 @@ class SuperSolver():
 # causes infinite loop: 3*x**2/(x+1) = 0
 
 # issues: zero not returning as a constant term
-#solver = Solver(Eqn('3*x**2 = 0'))
-#HEUR1.checkCondition(solver.eqn, solver.working_mem)
-#HEUR1.applyAction(solver.eqn, solver.working_mem)
-#pdb.set_trace()
-#SIMP3.checkCondition(solver.eqn, solver.working_mem)
-#SIMP3.applyAction(solver.eqn, solver.working_mem)
+solver = Solver(Eqn('3*x**2 - 5= 0'))
+pdb.set_trace()
+applied = HEUR4.checkCondition(solver.eqn, solver.working_mem)
+HEUR4.applyAction(solver.eqn, solver.working_mem)
+SIMP3.checkCondition(solver.eqn, solver.working_mem)
+SIMP3.applyAction(solver.eqn, solver.working_mem)
 #
 print 'hot dog'
 soln_gen = SuperSolver('3*x**2 - 5= 0')
