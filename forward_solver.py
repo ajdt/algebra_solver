@@ -597,7 +597,9 @@ class RuleHelper:
 		return SumPoly(ls)
 	@staticmethod
 	def mult5Helper(prod_poly):
-		new_terms = [ProdPoly.foil(prod_poly.subpoly[0], prod_poly.subpoly[1]) ] + prod_poly.subpoly[2:]
+		non_const = [ p for p in prod_poly.subpoly if not p.isConstTerm() ]
+		const = [ p for p in prod_poly.subpoly if p.isConstTerm() ]
+		new_terms = [ProdPoly.foil(non_const[0], non_const[1]) ] + non_const[2:] + const
 		return simplifyPolyTerms(new_terms, StdPoly.zero(), ProdPoly)
 	@staticmethod
 	def getRHSNonConstLHSConst(eqn):
@@ -725,7 +727,7 @@ MULT4 =	PolyRule( lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(
 										""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm""",
 										'mult4'
 									)
-MULT5 =	PolyRule(lambda p: isinstance(p, ProdPoly),
+MULT5 =	PolyRule(lambda p: isinstance(p, ProdPoly) and len([poly for poly in p.subpoly if not poly.isConstTerm()]) > 1, # there must be at least two non constant terms for this to make sense
 									RuleHelper.mult5Helper,
 									""" if a there is a product polynomial, then foil the first two factors""",
 									'mult5'
@@ -829,7 +831,7 @@ class SuperSolver():
 	def allSolns(self):
 		solutions = []
 		solvers = [Solver(self.eqn)]
-		pdb.set_trace()
+		#pdb.set_trace()
 		while len(solvers) > 0:
 			# take the top solver
 			soln = solvers.pop()
@@ -870,15 +872,13 @@ class SuperSolver():
 # causes infinite loop: 3*x**2/(x+1) = 0
 
 # issues: zero not returning as a constant term
-solver = Solver(Eqn('3*x**2/(x+1) = 0'))
-pdb.set_trace()
-applied = HEUR4.checkCondition(solver.eqn, solver.working_mem)
-HEUR4.applyAction(solver.eqn, solver.working_mem)
-SIMP3.checkCondition(solver.eqn, solver.working_mem)
-SIMP3.applyAction(solver.eqn, solver.working_mem)
+#solver = Solver(Eqn('3*x**2/(x+1) = 0'))
+#pdb.set_trace()
+#applied = MULT5.checkCondition(solver.eqn, solver.working_mem)
+#MULT5.applyAction(solver.eqn, solver.working_mem)
 
-print 'hot dog'
-soln_gen = SuperSolver('3*x**2/(x+1) = 0')
-for soln in soln_gen.allSolns():
-	print soln
+#print 'hot dog'
+#soln_gen = SuperSolver('3*x**2/(x+1) = 0')
+#for soln in soln_gen.allSolns():
+#	print soln
 
