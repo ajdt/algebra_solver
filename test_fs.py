@@ -86,7 +86,6 @@ class SampleCasesTest(unittest.TestCase):
 								'x**2 + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3: simp4',
 								'3*x - 3=x**2 + 3 + -x**2 - 3: simp2',
 								'3*x - 3=0: simp2',
-								'3*x - 3=0: simp9',
 								'3*x - 3 + 3=0 + 3: simp3',
 								'3*x - 3 + 3=3: simp0',
 								'3*x=3: simp2',
@@ -104,7 +103,6 @@ class SampleCasesTest(unittest.TestCase):
 								'((x**2) * (x + 1) * (x + 3))/((x + 1) * (x + 3)) + 3*x + -x**2 - 3=0: simp2',
 								'x**2 + 3*x + -x**2 - 3=0: simp5',
 								'-3 + 3*x=0: simp2',
-								'-3 + 3*x=0: simp9',
 								'-3 + 3*x + 3=0 + 3: simp3',
 								'-3 + 3*x + 3=3: simp0',
 								'0 + 3*x=3: simp2',
@@ -126,7 +124,6 @@ class SampleCasesTest(unittest.TestCase):
 								'(x + 3) * (x - 1) + (x + 1) * (x + 2) + (x - 3) * (-2*x - 5)=0: simp5',
 								'x**2 + 2*x - 3 + x**2 + 3*x + 2 + -2*x**2 + x + 15=0: mult5',
 								'6*x + 14=0: simp2',
-								'6*x + 14=0: simp9',
 								'6*x + 14 + -14=0 + -14: simp3',
 								'6*x + 14 + -14=-14: simp0',
 								'6*x=-14: simp2',
@@ -180,6 +177,9 @@ class SolverRuleTest(unittest.TestCase):
 		right = SumPoly([self.sp1, StdPoly(-3-1*x_symb)])
 		self.assertEqual(str(self.solver.eqn.left), str(left)) # (3x + 2 - x -2 )
 		self.assertEqual(self.solver.eqn.right, right) # (x + 1 -2 -x)
+
+		solver = Solver(Eqn('3*x**2 = 0'))
+		self.assertFalse( SIMP3.checkCondition(solver.eqn, solver.working_mem))
 	def test_simp4(self):
 		self.solver.working_mem = WorkingMem() # ensure goal is in wm
 		self.solver.working_mem.addGoal(WorkingMem.SET_RHS_ZERO)

@@ -646,7 +646,7 @@ SIMP0 =	PolyRule(	lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in 
 										""" simp0: if zeroes exist as additive terms, then remove them """,
 										'simp0'
 					)
-SIMP1 =	EqnRule(	lambda eq, wm : eq.degree() >= 2 and not wm.hasGoal(WorkingMem.SET_RHS_ZERO),
+SIMP1 =	EqnRule(	lambda eq, wm : eq.degree() >= 2 and not wm.hasGoal(WorkingMem.SET_RHS_ZERO), # TODO: remove this rule and add check to other simp rules instead!
 					lambda eq, wm : wm.addGoal(WorkingMem.SET_RHS_ZERO),
 					""" simp1: if degree is >= 2, then set working mem goal to make rhs zero """,
 					'simp1'
@@ -656,7 +656,7 @@ SIMP2 =	PolyRule(	lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x
 										""" simp2: if sumpoly has common terms, then add them together """,
 										'simp2'
 					)
-SIMP3 =	EqnRule(	lambda eq, wm : not wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.isConstTerm() and len(RuleHelper.getRHSNonConstLHSConst(eq)) > 0,
+SIMP3 =	EqnRule(	lambda eq, wm : eq.degree() == 1 and len(RuleHelper.getRHSNonConstLHSConst(eq)) > 0,
 					lambda eq, wm : RuleHelper.moveConstRHSNonConstLHS(eq),
 					""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """,
 					'simp3'
@@ -686,6 +686,8 @@ SIMP8 =	EqnRule(	lambda eq, wm : eq.right.isConstTerm() and eq.left.is_linear an
 										""" if equation has form ax = b, divide by a """,
 										'simp8'
 					)
+
+# TODO: simp9 will become obsolete if we remove simp1
 SIMP9 =	EqnRule(	lambda eq, wm : eq.degree() < 2 and wm.hasGoal(WorkingMem.SET_RHS_ZERO), 
 										lambda eq,wm : wm.removeGoal(WorkingMem.SET_RHS_ZERO),
 										""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal""",
@@ -839,12 +841,17 @@ class SuperSolver():
 # python to run specific tests: python -m unittest test_fs.SampleCasesTest.test_solve2
 
 # causes infinite loop: 3*x**2/(x+1) = 0
-solver = Solver(Eqn('3*x**2 = 0'))
-for step in solver.solve():
-	print step
 
+# issues: zero not returning as a constant term
+#solver = Solver(Eqn('3*x**2 = 0'))
+#HEUR1.checkCondition(solver.eqn, solver.working_mem)
+#HEUR1.applyAction(solver.eqn, solver.working_mem)
+#pdb.set_trace()
+#SIMP3.checkCondition(solver.eqn, solver.working_mem)
+#SIMP3.applyAction(solver.eqn, solver.working_mem)
+#
 print 'hot dog'
-soln_gen = SuperSolver('3*x**2 = 0')
+soln_gen = SuperSolver('3*x**2 - 5= 0')
 for soln in soln_gen.allSolns():
 	print soln
 
