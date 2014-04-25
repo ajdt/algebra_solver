@@ -157,6 +157,7 @@ class PolyRule(EqnRule):
 		""" Find a polynomial for which rule applies, apply rule. Boolean indicates rule was applied
 		@return: (new_polynomial, True/False) 
 		"""
+		# TODO: how to deal with sp.power.Pow polynomials??
 		if self._cond(poly):
 			return (self._action(poly), True)
 		elif not poly.is_polynomial(): # rational poly
@@ -178,45 +179,29 @@ class PolyRule(EqnRule):
 		else:
 			return (poly, False)
 		
-#class RuleHelper:
-	#""" contains mostly static methods to help rules operate on polys"""
-	#@staticmethod
-	#def computeLCM( poly_list):
-		#"""
-		#compute the lcm of a list of fractions
-		#@return: list of polynomials in the lcm
-		#"""
-		## TODO: overly complex, simplify
-		#terms = []
-		#for p in poly_list:
-			#if isinstance(p, ProdPoly):
-				#for subpoly in p.subpoly:
-					#num_p = len([x for x in p.subpoly if x == subpoly])
-					#num_terms = len([x for x in terms if x == subpoly])
-					## if subpoly occurs in p more times than already
-					## accounted for, then include it until we have
-					## enough multiples
-					#if num_p > num_terms:
-						#for i in range(num_p - num_terms):
-							#terms.append(subpoly)
-			#elif p not in terms:
-				#terms.append(p)
-		#return terms
+class RuleHelper:
+	""" contains mostly static methods to help rules operate on polys"""
+	@staticmethod
+	def computeLCM( poly_list):
+		"""
+		compute the lcm of a list of fractions
+		@return: list of polynomials in the lcm
+		"""
+		# TODO: dealing with finding the lcm of a list of 
+		return reduce(sp.lcm, poly_list, 0*x_symb)
 
+	@staticmethod
+	def completeSquare(poly):
+		if not poly.is_Add:
+			raise TypeError
+		# TODO: for now assumes a = 1, to avoid fractions
+		x_coef, const_coef = poly.coeff(x_symb)**2/4, poly.coeff(x_symb**0)
 
-	#@staticmethod
-	#def completeSquare(std_poly):
-		#if not isinstance(std_poly, StdPoly):
-			#raise TypeError
-		## TODO: for now assumes a = 1, to avoid fractions
-		#d = std_poly.coeff_monomial(x_symb)**2/4 # take coeff attached to x term
-		#c = std_poly.coeff_monomial(x_symb**0) # coef of constant term
-		#poly = (std_poly - c + d).factor()
-		#if isinstance(poly, sp.Pow): # factoring was successful
-			#factor = StdPoly(poly.args[0])
-			#return (SumPoly([ProdPoly([factor, factor.copy()]), StdPoly(c - d, x_symb)]), True)
-		#else:
-			#return (std_poly, False)
+		factored_poly = (std_poly - const_coef + x_coef).factor()
+		if factored_poly.is_Pow: # factoring was successful
+			return (factored_poly + (const_coef - x_coef), True)
+		else:
+			return (poly, False)
 
 	#@staticmethod
 	#def factorCubic(std_poly):
