@@ -247,12 +247,13 @@ class RuleHelper:
 			raise TypeError
 		# multiply all polynoms together, then convert to an expression
 		return reduce(__mul__, [sp.Poly(p) for p in prod_poly.args]).as_expr() 
-	#@staticmethod
-	#def getRHSNonConstLHSConst(eqn):
-		#right, left = eqn.right, eqn.left
-		#to_remove = right.getNonConstTerms() + left.getConstTerms()
-		#to_remove = [p for p in to_remove if not p.is_zero] # remove all zero terms
-		#return to_remove
+
+	@staticmethod
+	def getRHSNonConstLHSConst(eqn):
+		""" return a polynomial of const terms on lhs and non_const terms on rhs """
+		const_terms = filter(lambda x: x.is_Number, eqn.right.as_ordered_terms()) 
+		var_terms = filter(lambda x: not x.is_Number, eqn.right.as_ordered_terms()) 
+		return sp.add.Add.fromiter(const_terms + var_terms)
 	#@staticmethod
 	#def moveConstRHSNonConstLHS(eqn):
 		#to_remove = RuleHelper.getRHSNonConstLHSConst(eqn)
