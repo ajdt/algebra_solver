@@ -272,26 +272,24 @@ class RuleHelper:
 	@staticmethod
 	def setLHSToNum(eqn):
 		eqn.left, _ = eqn.left.as_numer_denom() # returns (num,denom) tuple
-	#@staticmethod
-	#def simp8Helper(eqn):
-		#divisor = eqn.left.coeffOf(Bases.X)
-		#eqn.left = StdPoly(x_symb)
-		#eqn.right = eqn.right.divide(StdPoly(divisor,x_symb))
-	#@staticmethod
-	#def mult2Helper(eqn):
-		#""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
-		## TODO: remove right.is_zero condition, after fixing the condition that requires moving everything to lhs
-		## TODO: remove the code for checking if rhs is zero, and adjusting likewise
-		## TODO: SIMPLIFY THIS CODE!!
-		## TODO: make atomic, right now does distributive and multiplicative step.
-		## get list of denom from both sides
-		#left_denom = [i.denom for i in eqn.left.getFractions()]
-		#right_denom = [] if eqn.right.is_zero else [i.denom for i in eqn.right.getFractions()]
-		## compute lcm and multiply
-		#lcm = simplifyPolyTerms(RuleHelper.computeLCM(left_denom + right_denom), StdPoly.one(), ProdPoly)
-		#left = SumPoly([p.mult(lcm) for p in eqn.left.subpoly]) if isinstance(eqn.left, SumPoly) else eqn.left.mult(lcm)
-		#eqn.left = left
-		#eqn.right = eqn.right if eqn.right.is_zero else eqn.right.mult(lcm)
+
+	@staticmethod
+	def simp8Helper(eqn):
+		divisor = eqn.left.coeff(x_symb)
+		eqn.left, eqn.right = eqn.left/divisor, eqn.right/divisor 
+
+	@staticmethod
+	def mult2Helper(eqn):
+		""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
+		# only do this if both sides have addition as top level operation
+		if not ( eqn.left.is_Add and eqn.right.is_Add):
+			return
+		left_denom = map(lambda x: x.as_numer_denom()[1], left.args)
+		left_denom = map(lambda x: x.as_numer_denom()[1], right.args)
+		# compute lcm and multiply
+		lcm = RuleHelper.computeLCM( left_denom + right_denom )
+		eqn.left	= sp.mul.Mul.fromiter([eqn.left, lcm])
+		eqn.right 	= sp.mul.Mul.fromiter([eqn.right, lcm])
 	#@staticmethod
 	#def heur4Helper(std_poly):
 		#"""
