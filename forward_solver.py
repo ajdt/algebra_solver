@@ -240,12 +240,13 @@ class RuleHelper:
 				ls.append(poly)
 		return sp.add.Add.fromiter(ls)
 
-	#@staticmethod
-	#def mult5Helper(prod_poly):
-		#non_const = [ p for p in prod_poly.subpoly if not p.isConstTerm() ]
-		#const = [ p for p in prod_poly.subpoly if p.isConstTerm() ]
-		#new_terms = [ProdPoly.foil(non_const[0], non_const[1]) ] + non_const[2:] + const
-		#return simplifyPolyTerms(new_terms, StdPoly.zero(), ProdPoly)
+	@staticmethod
+	def mult5Helper(prod_poly):
+		""" foil all terms in the product poly """
+		if not prod_poly.is_Mul or not prod_poly.is_polynomial: #  ensure this is not a fraction also
+			raise TypeError
+		# multiply all polynoms together, then convert to an expression
+		return reduce(__mul__, [sp.Poly(p) for p in prod_poly.args]).as_expr() 
 	#@staticmethod
 	#def getRHSNonConstLHSConst(eqn):
 		#right, left = eqn.right, eqn.left
