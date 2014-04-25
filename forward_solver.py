@@ -203,38 +203,22 @@ class RuleHelper:
 		else:
 			return (poly, False)
 
-	#@staticmethod
-	#def factorCubic(std_poly):
-		#"""
-		#factors a sumpoly that is in standard form
-		#@return: (factored_poly, True) otherwise (original_poly, False)
-		#XXX: assumes poly is in standard form
-		#"""
-		#if not isinstance(std_poly, StdPoly):
-			#raise TypeError
+	@staticmethod
+	def factor(std_poly):
+		"""
+		factors a standard poly
+		@return: (factored_poly, True) otherwise (original_poly, False)
+		XXX: assumes poly is in standard form
+		"""
+		# TODO: remove boolean return value
+		if not std_poly.is_Add:
+			raise TypeError
 
-		#poly = std_poly.factor()
-		#if isinstance(poly, sp.Mul): # factoring was successful
-			#return (ProdPoly([StdPoly(p) for p in poly.args]), True)
-		#else:
-			#return (std_poly, False)
-
-	#@staticmethod
-	#def factor(std_poly):
-		#"""
-		#factors a standard poly
-		#@return: (factored_poly, True) otherwise (original_poly, False)
-		#XXX: assumes poly is in standard form
-		#"""
-		## TODO: remove boolean return value
-		#if not isinstance(std_poly, StdPoly):
-			#raise TypeError
-
-		#poly = std_poly.factor()
-		#if isinstance(poly, sp.Mul): # factoring was successful
-			#return (ProdPoly([ StdPoly(p, x_symb) for p in poly.args ]), True)
-		#else:
-			#return (std_poly, False)
+		factored_poly = std_poly.factor()
+		if isinstance(poly, sp.Mul): # factoring was successful
+			return (factored_poly, True)
+		else:
+			return (std_poly, False)
 
 	#@staticmethod
 	#def _removeZeroes(sum_poly):
