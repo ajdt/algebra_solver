@@ -290,23 +290,24 @@ class RuleHelper:
 		lcm = RuleHelper.computeLCM( left_denom + right_denom )
 		eqn.left	= sp.mul.Mul.fromiter([eqn.left, lcm])
 		eqn.right 	= sp.mul.Mul.fromiter([eqn.right, lcm])
-	#@staticmethod
-	#def heur4Helper(std_poly):
-		#"""
-		#factors a poly of the form a*x**2 - b
-		#@return: (factored_poly, True) otherwise (original_poly, False)
-		#XXX: assumes poly is in standard form
-		#"""
-		## TODO: refactor conversion to ProdPoly (repeated in factor() function
-		#if not isinstance(std_poly, StdPoly):
-			#raise TypeError
 
-		#a, c = std_poly.coeff_monomial(x_symb**2), std_poly.coeff_monomial(x_symb**0)
-		#poly = std_poly.factor(extension=sp.sqrt(abs(c))/sp.sqrt(a))
-		#if isinstance(poly, sp.Mul): # factoring was successful
-			#return (ProdPoly([ StdPoly(p, x_symb) for p in poly.args ]), True)
-		#else:
-			#return (std_poly, False)
+	@staticmethod
+	def heur4Helper(std_poly):
+		"""
+		factors a poly of the form a*x**2 - b
+		@return: (factored_poly, True) otherwise (original_poly, False)
+		XXX: assumes poly is in standard form
+		"""
+		# TODO: refactor conversion to ProdPoly (repeated in factor() function
+		if not isinstance(std_poly, StdPoly):
+			raise TypeError
+
+		quad_coeff, const_coef = std_poly.coeff(x_symb**2), std_poly.coeff(x_symb**0)
+		factored_poly = std_poly.factor(extension=sp.sqrt(abs(const_coeff))/sp.sqrt(quad_coeff))
+		if isinstance(factored_poly, sp.Mul): # factoring was successful
+			return (factored_poly, True)
+		else:
+			return (std_poly, False)
 
 ############################## RULES ##############################	
 # condition, action, description, name
