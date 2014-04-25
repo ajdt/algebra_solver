@@ -220,36 +220,26 @@ class RuleHelper:
 		else:
 			return (std_poly, False)
 
-	#@staticmethod
-	#def _removeZeroes(sum_poly):
-		#no_zeroes = [p for p in sum_poly.subpoly if not p.is_zero ]
-		#return simplifyPolyTerms(no_zeroes, StdPoly.zero(), SumPoly)
-	#@staticmethod
-	#def removeFactorsFrom(factor, remove_from):
-		#"""
-		#return a new list with the given polynomial removed
-		#"""
-		#new_list = list(remove_from)
-		#if isinstance(factor, ProdPoly):
-			#for p in factor.subpoly:
-				#new_list.remove(p)
-		#else :
-			#new_list.remove(factor)
-		#return new_list
+	@staticmethod
+	def _removeZeroes(sum_poly):
+		return sp.add.Add.fromiter( filter( lambda p : not p.is_zero, sum_poly.args) )
 
-	#@staticmethod
-	#def mult4Helper(sum_poly):
-		#lcm = Solver.computeLCM( [ i.denom for i in sum_poly.getFractions() ])
-		#ls = []
-		## multiply all fractions to get a common denominator
-		#for poly in sum_poly.subpoly:
-			#if isinstance(poly, RatPoly): # compute the correct multiplier to get common denominator
-				#multiplier = simplifyPolyTerms( Solver.removeFactorsFrom(poly.denom, lcm), StdPoly.one(), ProdPoly )
-				#mult_frac = RatPoly(multiplier, multiplier.copy())
-				#ls.append(poly.mult(mult_frac))
-			#else:
-				#ls.append(poly)
-		#return SumPoly(ls)
+	@staticmethod
+	def mult4Helper(sum_poly):
+		# find the lcm over all denominators
+		denom_list = map(lambda (num,deno): deno, [p.as_numer_denom() for p in sum_poly.args] )
+		lcm = RuleHelper.computeLCM(denom_list)
+		ls = []
+		# multiply every fraction, so that it's denom is the lcm
+		for poly in sum_poly.args:
+			if not poly.is_polynomial: # a fraction
+				numer, denom = poly.as_numer_denom()
+				multiplier = (lcm/numer).cancel() # compute the correct multiplier to get common denominator
+				ls.append( sp.mul.Mul.fromiter([poly, multiplier/multiplier]) )
+			else:
+				ls.append(poly)
+		return sp.add.Add.fromiter(ls)
+
 	#@staticmethod
 	#def mult5Helper(prod_poly):
 		#non_const = [ p for p in prod_poly.subpoly if not p.isConstTerm() ]
