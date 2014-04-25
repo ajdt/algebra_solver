@@ -48,7 +48,7 @@ class Eqn:
 		new_eqn.left  = self.left.copy()
 		new_eqn.right = self.right.copy()
 		return new_eqn
-	def degree(self): return max([self.left.degree(), self.right.degree()])
+	def degree(self): return max([sp.degree(self.left), sp.degree(self.right)])
 
 	@staticmethod # TODO: unnecessary!
 	def strToPolyTree(string):
@@ -145,12 +145,13 @@ class PolyRule(EqnRule):
 		if self._cond(poly):
 			return True
 		else:
-			if isinstance(poly, StdPoly):
+			if not poly.is_polynomial(): # rational polynomial
+				numer, denom = poly.as_numer_denom()
+				return self._checkPoly(numer) or self._checkPoly(denom)
+			elif poly.is_Add or poly.is_Mul:
+				return any( [self._checkPoly(p) for p in poly.args] )
+			else : 
 				return False
-			elif isinstance(poly, RatPoly):
-				return self._checkPoly(poly.num) or self._checkPoly(poly.denom)
-			else : # SumPoly or ProdPoly
-				return any( [self._checkPoly(p) for p in poly.subpoly] )
 
 	def _applyActionRecursive(self, poly):
 		""" Find a polynomial for which rule applies, apply rule. Boolean indicates rule was applied
@@ -158,21 +159,24 @@ class PolyRule(EqnRule):
 		"""
 		if self._cond(poly):
 			return (self._action(poly), True)
+		elif not poly.is_polynomial(): # rational poly
+			numer,denom = poly.as_numer_denom()
+			new_num, changed = self._applyActionRecursive(numer)
+			if changed:
+				return (new_num/denom, True)
+			else :
+				new_denom, changed = self._applyActionRecursive(denom)
+				return (new_num/new_denom, changed)
+		elif poly.is_Add :
+			# recursively try every subpoly, generate a new Add poly from their result, and return true if any of the subpolys had the rule applied to it
+			new_polys, bools = map(list, zip(*sorted( self._applyActionRecursive(p) for p in poly.args )))
+			return (sp.add.Add.fromiter(new_polys), any(bools))
+		elif poly.is_Mul :
+			# recursively try every subpoly, generate a new Add poly from their result, and return true if any of the subpolys had the rule applied to it
+			new_polys, bools = map(list, zip(*sorted( self._applyActionRecursive(p) for p in poly.args )))
+			return (sp.mul.Mul.fromiter(new_polys), any(bools))
 		else:
-			if isinstance(poly, StdPoly):
-				return (poly, False)
-			elif isinstance(poly, RatPoly):
-				new_num, changed = self._applyActionRecursive(poly.num)
-				if changed:
-					return (RatPoly(new_num, poly.denom), changed)
-				else:
-					new_denom, changed = self._applyActionRecursive(poly.denom)
-					return (RatPoly(poly.num, new_denom), changed)
-			else : # SumPoly or ProdPoly
-				ls = [self._applyActionRecursive(p) for p in poly.subpoly]
-				terms, bools = map(lambda x: x[0], ls), map(lambda x: x[1], ls)
-				result = SumPoly(terms) if isinstance(poly, SumPoly) else ProdPoly(terms)
-				return (result, any(bools))
+			return (poly, False)
 		
 #class RuleHelper:
 	#""" contains mostly static methods to help rules operate on polys"""
