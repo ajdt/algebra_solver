@@ -263,14 +263,15 @@ class RuleHelper:
 	def moveConstRHSNonConstLHS(eqn):
 		""" subtract all lhs constant terms and rhs nonconstant terms from both sides """
 		remove_poly = RuleHelper.getRHSNonConstLHSConst(eqn)
-		eqn.left, eqn.right  = RuleHelper.subtractPoly(eqn.left, remove_poly), RuleHelper.subtractPoly(eqn.right, remove_poly)
-	#@staticmethod
-	#def subtractFromEqn(eqn, poly):
-		#eqn.right = eqn.right.subtract(poly)
-		#eqn.left = eqn.left.subtract(poly)
-	#@staticmethod
-	#def setLHSToNum(eqn):
-		#eqn.left = eqn.left.num
+		RuleHelper.subtractFromEqn(eqn, remove_poly) 
+
+	@staticmethod
+	def subtractFromEqn(eqn, poly):
+		eqn.left, eqn.right  = RuleHelper.subtractPoly(eqn.left, poly), RuleHelper.subtractPoly(eqn.right, poly)
+
+	@staticmethod
+	def setLHSToNum(eqn):
+		eqn.left, _ = eqn.left.as_numer_denom() # returns (num,denom) tuple
 	#@staticmethod
 	#def simp8Helper(eqn):
 		#divisor = eqn.left.coeffOf(Bases.X)
