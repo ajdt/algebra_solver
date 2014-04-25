@@ -254,12 +254,16 @@ class RuleHelper:
 		const_terms = filter(lambda x: x.is_Number, eqn.right.as_ordered_terms()) 
 		var_terms = filter(lambda x: not x.is_Number, eqn.right.as_ordered_terms()) 
 		return sp.add.Add.fromiter(const_terms + var_terms)
-	#@staticmethod
-	#def moveConstRHSNonConstLHS(eqn):
-		#to_remove = RuleHelper.getRHSNonConstLHSConst(eqn)
-		#remove_poly =  simplifyPolyTerms(to_remove, StdPoly.zero(), SumPoly)
-		## subtract the terms from both sides
-		#eqn.left, eqn.right  = eqn.left.subtract(remove_poly), eqn.right.subtract(remove_poly)
+
+	@staticmethod
+	def subtractPoly(poly, to_subtract):
+		""" subtract one polynomial from the other without simplification"""
+		return sp.sympify(str(poly) + str(-1*to_subtract), evaluate=False)
+	@staticmethod
+	def moveConstRHSNonConstLHS(eqn):
+		""" subtract all lhs constant terms and rhs nonconstant terms from both sides """
+		remove_poly = RuleHelper.getRHSNonConstLHSConst(eqn)
+		eqn.left, eqn.right  = RuleHelper.subtractPoly(eqn.left, remove_poly), RuleHelper.subtractPoly(eqn.right, remove_poly)
 	#@staticmethod
 	#def subtractFromEqn(eqn, poly):
 		#eqn.right = eqn.right.subtract(poly)
