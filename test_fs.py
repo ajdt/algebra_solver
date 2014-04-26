@@ -189,11 +189,13 @@ class SolverRuleTest(unittest.TestCase):
 		SIMP4.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(str(self.solver.eqn.left),  '-3*x + (x + 1)*(x + 3) - 3') # TODO: equations compared as strings due to sympy peculiarity
 		self.assertEqual(str(self.solver.eqn.right), '-3*x + 3*x - 3 + 3')
-	#def test_simp5(self):
-		#self.solver.eqn = Eqn('(3*x+3)/((x+1)*(3*x+3)) = (x+3)')
-		#self.assertTrue(SIMP5.checkCondition(self.solver.eqn, self.solver.working_mem))
-		#SIMP5.applyAction(self.solver.eqn, self.solver.working_mem)
-		#self.assertEqual(self.solver.eqn.left, RatPoly(StdPoly(1, x_symb), self.sp1) )
+	def test_simp5(self):
+		self.solver.eqn = Eqn('(3*x+3)/((x+1)*(3*x+3)) = (x+3)')
+		self.assertTrue(SIMP5.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP5.applyAction(self.solver.eqn, self.solver.working_mem)
+		comp_to = sp.sympify('1/(x+1)', evaluate=False)
+		self.solver.eqn.left == comp_to
+		self.assertEqual(str(self.solver.eqn.left),str(comp_to)) # TODO: have to compare as strings due to hashable_content() issue, tuples have same content but reordered
 
 	#def test_mult1(self):
 		#self.solver.eqn = Eqn('(x+3) / ((3*x+3)/((x+1)*(3*x+3))) = (x+3)')

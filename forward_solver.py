@@ -341,11 +341,11 @@ SIMP4 =	EqnRule(	lambda eq, wm : wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.
 					""" if our goal is to set rhs to zero, then subtract all rhs terms from lhs""",
 					'simp4'
 					)
-#SIMP5 =	PolyRule(	lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p), 
-										#RatPoly.cancelCommonFactors,
-										#""" simp5: if num and denom of a rational polynomial have common factors, then cancel these factors """,
-										#'simp5'
-					#)
+SIMP5 =	PolyRule(	lambda p: not p.is_polynomial()  and p.cancel() != p,  # TODO: better way to check if have common factors
+					sp.polys.cancel,
+					""" simp5: if num and denom of a rational polynomial have common factors, then cancel these factors """,
+					'simp5'
+					)
 #SIMP6 =	PolyRule(	lambda x : isinstance(x, RatPoly) and x.num.is_zero , 
 										#lambda x : StdPoly.zero(),
 										#""" simp6: if zero exists in a numerator, remove the fraction involved """,
