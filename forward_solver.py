@@ -309,6 +309,10 @@ class RuleHelper:
 		else:
 			return (std_poly, False)
 
+	@staticmethod
+	def isFactored(poly):
+		all([sp.degree(p) < 2 for p in poly.args ])
+
 ############################## RULES ##############################	
 # condition, action, description, name
 SIMP0 =	PolyRule(	lambda x : x.is_Add and any([p.is_zero for p in x.args]), 
@@ -407,30 +411,30 @@ SIMP2 =	PolyRule(	lambda x : x.is_Add and not (x.collect(x_symb) == x),  # colle
 									#,""" if a polynomial of the form ax**2 -b occurs anywhere, then factor it as (x + sqrt(a/b)) (x - sqrt(a/b)) """,
 									#'heur4'
 									#)
-#class Solver:
-	#def __init__(self, eqn, rule_ord=lambda rule: Solver.RULE_ORDERING.index(rule)): 
-		#self.eqn, self.working_mem	= eqn, WorkingMem()
-		#self.rule_ordering			= rule_ord
+class Solver:
+	def __init__(self, eqn, rule_ord=lambda rule: Solver.RULE_ORDERING.index(rule)): 
+		self.eqn, self.working_mem	= eqn, WorkingMem()
+		self.rule_ordering			= rule_ord
 
-	#def __str__(self): return '\n'.join(self.working_mem.steps)
-	#def copy(self):
-		#new_solver = Solver(self.eqn.copy())
-		#new_solver.working_mem = self.working_mem.copy()
-		#return new_solver
+	def __str__(self): return '\n'.join(self.working_mem.steps)
+	def copy(self):
+		new_solver = Solver(self.eqn.copy(), self.rule_ordering)
+		new_solver.working_mem = self.working_mem.copy()
+		return new_solver
 	############################### win conditions  ##############################
-	#def win1(self): # """ case a = b"""
-		#""" contradiction:  reduced to a = b, but a =/= b """
-		#right, left = self.eqn.right, self.eqn.left
-		#return (left.isConstTerm() and right.isConstTerm() and left != right)
-	#def win2(self):
-		#""" win condition: ax = b problem is solved """
-		#right, left = self.eqn.right, self.eqn.left
-		#return left.is_linear and right.isConstTerm() and left.coeffOf(Bases.X) == 1 and left.coeffOf(Bases.CONST) is None
-	#def win3(self):
-		#""" win condition: lhs is completely factored, rhs is zero """
-		#right, left = self.eqn.right, self.eqn.left
-		## TODO: revisit this rule, it's gotten complex
-		#return ( self.eqn.degree() >= 2 and left.isFactored() and right.is_zero and not isinstance(left, SumPoly) and not isinstance(left, RatPoly))
+	def win1(self): # """ case a = b"""
+		""" contradiction:  reduced to a = b, but a =/= b """
+		right, left = self.eqn.right, self.eqn.left
+		return (left.is_Number and right.is_Number and left != right)
+	def win2(self):
+		""" win condition: ax = b problem is solved """
+		right, left = self.eqn.right, self.eqn.left
+		return sp.degree(left) == 1 and right.is_Number and left.coeff(x_symb) == 1 and left.coeff(x_symb**0) == 0
+	def win3(self):
+		""" win condition: lhs is completely factored, rhs is zero """
+		right, left = self.eqn.right, self.eqn.left
+		# TODO: revisit this rule, it's gotten complex
+		return ( self.eqn.degree() >= 2 and RuleHelper.isFactored(left) and right.is_zero and not left.is_Add and not left.is_polynomial) # not a rational polynomial
 
 	############################### checking and solving ##############################
 	### list of rules and precedences they take
