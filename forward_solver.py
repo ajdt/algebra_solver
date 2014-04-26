@@ -240,16 +240,18 @@ class RuleHelper:
 
 	@staticmethod
 	def mult4Helper(sum_poly):
+		# TODO: make sure this works when poly isn't Add type
 		# find the lcm over all denominators
 		denom_list = map(lambda (num,deno): deno, [p.as_numer_denom() for p in sum_poly.args] )
 		lcm = RuleHelper.computeLCM(denom_list)
 		ls = []
 		# multiply every fraction, so that it's denom is the lcm
 		for poly in sum_poly.args:
-			if not poly.is_polynomial: # a fraction
+			if not poly.is_polynomial(): # a fraction
 				numer, denom = poly.as_numer_denom()
-				multiplier = (lcm/numer).cancel() # compute the correct multiplier to get common denominator
-				ls.append( sp.mul.Mul.fromiter([poly, multiplier/multiplier]) )
+				multiplier = (lcm/denom).cancel() # compute the correct multiplier to get common denominator
+				# TODO: NOTE: only way to avoid evaluation, this is terribly hacky though
+				ls.append( sp.sympify( '(' + str(numer) +') * (' + str(multiplier) +')/( (' + str(denom) + ')*(' + str(multiplier) + '))', evaluate=False )) 
 			else:
 				ls.append(poly)
 		return sp.add.Add.fromiter(ls)
@@ -416,11 +418,11 @@ MULT2 =	EqnRule(	lambda eq, wm : RuleHelper.polyHasFractions(eq.left)  and  (Rul
 					""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """,
 					'mult2'
 					)
-#MULT4 =	PolyRule( lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(p.getFractions()) > 1,
-										#RuleHelper.mult4Helper,
-										#""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm""",
-										#'mult4'
-									#)
+MULT4 =	PolyRule( lambda p: p.is_Add and RuleHelper.polyHasFractions(p),
+										RuleHelper.mult4Helper,
+										""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm""",
+										'mult4'
+									)
 #MULT5 =	PolyRule(lambda p: isinstance(p, ProdPoly) and len([poly for poly in p.subpoly if not poly.isConstTerm()]) > 1, # there must be at least two non constant terms for this to make sense
 									#RuleHelper.mult5Helper,
 									#""" if a there is a product polynomial, then foil the first two factors""",

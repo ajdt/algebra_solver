@@ -235,6 +235,14 @@ class SolverRuleTest(unittest.TestCase):
 		self.assertEqual(str(solver.eqn.left), '(x + 1)*(x + 3)/(x + 1)') 
 		self.assertEqual(str(solver.eqn.right), '(x + 1)*(x + 3)/(x + 3)')
 
+	def test_mult4(self):
+		solver = Solver(Eqn('1/(x+1) + 1/(x+3) = 0 '))
+		self.assertTrue(MULT4.checkCondition(solver.eqn, solver.working_mem))
+		pdb.set_trace()
+		MULT4.applyAction(solver.eqn, solver.working_mem)
+
+		self.assertEqual(str(solver.eqn.left), '(x + 3)/((x + 1)*(x + 3)) + (x + 1)/((x + 1)*(x + 3))') 
+
 	## TODO: test for mult4
 	#def test_mult5(self):
 		#self.solver.eqn = Eqn('(x+1)*(x+3) = 3*x+3')
