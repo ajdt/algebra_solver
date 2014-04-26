@@ -199,9 +199,15 @@ class SolverRuleTest(unittest.TestCase):
 	def test_simp6(self):
 		self.solver.eqn = Eqn('0/(x**2+3*x+3) = (x+3)')
 		self.assertTrue(SIMP6.checkCondition(self.solver.eqn, self.solver.working_mem))
-		SIMP5.applyAction(self.solver.eqn, self.solver.working_mem)
-		self.solver.eqn.left == sp.numbers.Zero
+		SIMP6.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertTrue(self.solver.eqn.left.is_zero) 
+
+	def test_simp7(self):
+		self.solver.eqn = Eqn('(3*x**2 + 5*x)/(x**2+3*x+3) = 0')
+		self.assertTrue(SIMP7.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP7.applyAction(self.solver.eqn, self.solver.working_mem)
+		new_lhs = 3*x_symb**2 + 5* x_symb
+		self.assertTrue(self.solver.eqn.left, new_lhs) 
 
 	#def test_mult1(self):
 		#self.solver.eqn = Eqn('(x+3) / ((3*x+3)/((x+1)*(3*x+3))) = (x+3)')

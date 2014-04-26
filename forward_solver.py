@@ -351,11 +351,11 @@ SIMP6 =	PolyRule(	lambda x : not x.is_polynomial() and x.as_numer_denom()[0].is_
 										""" simp6: if zero exists in a numerator, remove the fraction involved """,
 										'simp6'
 					)
-#SIMP7 =	EqnRule(	lambda eq, wm : isinstance(eq.left, RatPoly) and eq.right.is_zero, 
-										#lambda eq,wm : RuleHelper.setLHSToNum(eq),
-										#""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """,
-										#'simp7'
-					#)
+SIMP7 =	EqnRule(	lambda eq, wm : not eq.left.is_polynomial() and eq.right.is_zero, 
+										lambda eq,wm : RuleHelper.setLHSToNum(eq),
+										""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """,
+										'simp7'
+					)
 #SIMP8 =	EqnRule(	lambda eq, wm : eq.right.isConstTerm() and eq.left.is_linear and eq.left.coeffOf(Bases.X) != 1 and eq.left.coeffOf(Bases.CONST) is None, 
 										#lambda eq,wm : RuleHelper.simp8Helper(eq),
 										#""" if equation has form ax = b, divide by a """,
