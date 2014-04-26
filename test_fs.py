@@ -213,6 +213,12 @@ class SolverRuleTest(unittest.TestCase):
 		SIMP8.applyAction(self.solver.eqn, self.solver.working_mem)
 		new_lhs = x_symb 
 		self.assertTrue(self.solver.eqn.left, new_lhs) 
+	def test_simp9(self):
+		solver = Solver(Eqn('3*x = 5'))
+		solver.working_mem.addGoal(WorkingMem.SET_RHS_ZERO)
+		self.assertTrue(SIMP9.checkCondition(solver.eqn, solver.working_mem))
+		SIMP9.applyAction(solver.eqn, solver.working_mem)
+		self.assertFalse(solver.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO))
 
 	#def test_mult1(self):
 		#self.solver.eqn = Eqn('(x+3) / ((3*x+3)/((x+1)*(3*x+3))) = (x+3)')

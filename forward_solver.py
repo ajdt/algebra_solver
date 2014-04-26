@@ -362,11 +362,11 @@ SIMP8 =	EqnRule(	lambda eq, wm : eq.right.is_Number and sp.degree(eq.left, gens=
 										'simp8'
 					)
 ## TODO: simp9 will become obsolete if we remove simp1
-#SIMP9 =	EqnRule(	lambda eq, wm : eq.degree() < 2 and wm.hasGoal(WorkingMem.SET_RHS_ZERO), 
-										#lambda eq,wm : wm.removeGoal(WorkingMem.SET_RHS_ZERO),
-										#""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal""",
-										#'simp9'
-					#)
+SIMP9 =	EqnRule(	lambda eq, wm : eq.degree() < 2 and wm.hasGoal(WorkingMem.SET_RHS_ZERO), 
+										lambda eq,wm : wm.removeGoal(WorkingMem.SET_RHS_ZERO),
+										""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal""",
+										'simp9'
+					)
 #MULT1 =	PolyRule(	lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly), 
 										#lambda p: ProdPoly([p.num, p.denom.reciprocal()]),
 										#""" if denom of rational poly is a fraction, the multiply by its reciprocal """,
