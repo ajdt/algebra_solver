@@ -1,4 +1,4 @@
-##import pdb  # used for debugging
+import pdb  # used for debugging
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
 import random # for random eqn generation
@@ -170,7 +170,8 @@ class PolyRule(EqnRule):
 				return (new_num/new_denom, changed)
 		elif poly.is_Add :
 			# recursively try every subpoly, generate a new Add poly from their result, and return true if any of the subpolys had the rule applied to it
-			new_polys, bools = map(list, zip(*sorted( self._applyActionRecursive(p) for p in poly.args )))
+			recursive_apply = [self._applyActionRecursive(p) for p in poly.args]
+			new_polys, bools = [res[0] for res in recursive_apply], [res[1] for res in recursive_apply]
 			return (sp.add.Add.fromiter(new_polys), any(bools))
 		elif poly.is_Mul :
 			# recursively try every subpoly, generate a new Add poly from their result, and return true if any of the subpolys had the rule applied to it
