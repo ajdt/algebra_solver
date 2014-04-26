@@ -176,19 +176,19 @@ class SolverRuleTest(unittest.TestCase):
 		right	= sp.sympify('x + 1 -x -3 ', evaluate=False)
 		self.assertEqual(str(self.solver.eqn.left), str(left)) # (3x + 2 - x -2 )
 		self.assertEqual(self.solver.eqn.right, right) # (x + 1 -2 -x)
+		solver = Solver(Eqn('3*x**2 = 0'))
+		self.assertFalse( SIMP3.checkCondition(solver.eqn, solver.working_mem))
+	def test_simp4(self):
+		self.solver.working_mem = WorkingMem() # ensure goal is in wm
+		self.solver.working_mem.addGoal(WorkingMem.SET_RHS_ZERO)
 
-		#solver = Solver(Eqn('3*x**2 = 0'))
-		#self.assertFalse( SIMP3.checkCondition(solver.eqn, solver.working_mem))
-	#def test_simp4(self):
-		#self.solver.working_mem = WorkingMem() # ensure goal is in wm
-		#self.solver.working_mem.addGoal(WorkingMem.SET_RHS_ZERO)
-
-		#self.solver.eqn = Eqn('(x+1)*(x+3) = (3*x + 3)')
-		#prod_poly = Eqn.strToPolyTree('(x+1)*(x+3)') 
-		#self.assertTrue( SIMP4.checkCondition(self.solver.eqn, self.solver.working_mem))
-		#SIMP4.applyAction(self.solver.eqn, self.solver.working_mem)
-		#self.assertEqual(self.solver.eqn.left, prod_poly.subtract(self.sp3))
-		#self.assertTrue(self.sp3.subtract(self.sp3.copy()))
+		self.solver.eqn = Eqn('(x+1)*(x+3) = (3*x + 3)')
+		prod_poly = sp.sympify('(x+1)*(x+3)', evaluate=False) 
+		to_subtract = 3*x_symb + 3
+		self.assertTrue( SIMP4.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP4.applyAction(self.solver.eqn, self.solver.working_mem)
+		self.assertEqual(str(self.solver.eqn.left),  '-3*x + (x + 1)*(x + 3) - 3') # TODO: equations compared as strings due to sympy peculiarity
+		self.assertEqual(str(self.solver.eqn.right), '-3*x + 3*x - 3 + 3')
 	#def test_simp5(self):
 		#self.solver.eqn = Eqn('(3*x+3)/((x+1)*(3*x+3)) = (x+3)')
 		#self.assertTrue(SIMP5.checkCondition(self.solver.eqn, self.solver.working_mem))

@@ -48,7 +48,7 @@ class Eqn:
 		new_eqn.left  = self.left.copy()
 		new_eqn.right = self.right.copy()
 		return new_eqn
-	def degree(self): return max([sp.degree(self.left), sp.degree(self.right)])
+	def degree(self): return max([sp.degree(self.left, gens=x_symb), sp.degree(self.right, gens=x_symb)])
 
 	@staticmethod # TODO: unnecessary!
 	def strToPolyTree(string):
@@ -312,7 +312,7 @@ class RuleHelper:
 
 	@staticmethod
 	def isFactored(poly):
-		all([sp.degree(p) < 2 for p in poly.args ])
+		all([sp.degree(p, gens=x_symb) < 2 for p in poly.args ])
 
 ############################## RULES ##############################	
 # condition, action, description, name
@@ -336,11 +336,11 @@ SIMP3 =	EqnRule(	lambda eq, wm : eq.degree() == 1 and not RuleHelper.getRHSNonCo
 					""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """,
 					'simp3'
 					)
-#SIMP4 =	EqnRule(	lambda eq, wm : wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.is_zero,
-					#lambda eq, wm : RuleHelper.subtractFromEqn(eq, eq.right),
-					#""" if our goal is to set rhs to zero, then subtract all rhs terms from lhs""",
-					#'simp4'
-					#)
+SIMP4 =	EqnRule(	lambda eq, wm : wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.is_zero,
+					lambda eq, wm : RuleHelper.subtractFromEqn(eq, eq.right),
+					""" if our goal is to set rhs to zero, then subtract all rhs terms from lhs""",
+					'simp4'
+					)
 #SIMP5 =	PolyRule(	lambda p: isinstance(p, RatPoly) and RatPoly.numDenomShareFactors(p), 
 										#RatPoly.cancelCommonFactors,
 										#""" simp5: if num and denom of a rational polynomial have common factors, then cancel these factors """,
@@ -430,7 +430,7 @@ class Solver:
 	def win2(self):
 		""" win condition: ax = b problem is solved """
 		right, left = self.eqn.right, self.eqn.left
-		return sp.degree(left) == 1 and right.is_Number and left.coeff(x_symb) == 1 and left.coeff(x_symb**0) == 0
+		return sp.degree(left,gens=x_symb) == 1 and right.is_Number and left.coeff(x_symb) == 1 and left.coeff(x_symb**0) == 0
 	def win3(self):
 		""" win condition: lhs is completely factored, rhs is zero """
 		right, left = self.eqn.right, self.eqn.left
