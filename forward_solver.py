@@ -188,8 +188,21 @@ class RuleHelper:
 		compute the lcm of a list of fractions
 		@return: list of polynomials in the lcm
 		"""
-		# TODO: dealing with finding the lcm of a list of 
-		return reduce(sp.lcm, poly_list, 0*x_symb)
+		# TODO: can be one-liner if we can prevent autosimplification : return reduce(sp.lcm, poly_list, 1)
+		# count each factor's multiplicity
+		lcm_dict = {}
+		for poly in poly_list:
+			if poly.is_Mul:
+				# for each factor, count number of times it occurs, and update it's count
+				for factor in poly.args:
+					count = sum( [1 for q in poly.args if factor == q])
+					lcm_dict[factor] = count if lcm_dict.get(factor, 0) < count else lcm_dict.get(factor,0)
+			elif not lcm_dict.has_key(poly):
+				lcm_dict[poly] = 1
+
+		# for each factor, add it to a list a number of times equal to it's multiplicity
+		lcm_list = reduce(list.__add__, [ [poly]*multiplicity for poly, multiplicity in lcm_dict.items()], [])
+		return sp.mul.Mul.fromiter(lcm_list)
 
 	@staticmethod
 	def completeSquare(poly):
@@ -279,14 +292,19 @@ class RuleHelper:
 		divisor = eqn.left.coeff(x_symb)
 		eqn.left, eqn.right = eqn.left/divisor, eqn.right/divisor 
 
+	@staticmethod 
+	def getTopLevelDenoms(poly):
+		""" return all denominators that occcur at the top-most level"""
+		if poly.is_Add:
+			return map(lambda x: x.as_numer_denom()[1], poly.args)
+		else:
+			return [ poly.as_numer_denom()[1] ]
+			
 	@staticmethod
 	def mult2Helper(eqn):
 		""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """
-		# only do this if both sides have addition as top level operation
-		if not ( eqn.left.is_Add and eqn.right.is_Add):
-			return
-		left_denom = map(lambda x: x.as_numer_denom()[1], left.args)
-		left_denom = map(lambda x: x.as_numer_denom()[1], right.args)
+		left_denom	= RuleHelper.getTopLevelDenoms(eqn.left)
+		right_denom	= RuleHelper.getTopLevelDenoms(eqn.right)
 		# compute lcm and multiply
 		lcm = RuleHelper.computeLCM( left_denom + right_denom )
 		eqn.left	= sp.mul.Mul.fromiter([eqn.left, lcm])
@@ -329,6 +347,11 @@ class RuleHelper:
 	def mult1Helper(poly): 
 		num, denom = poly.as_numer_denom()
 		return num/denom
+	@staticmethod
+	def polyHasFractions(poly): 
+		""" return true if polynomial is or has rational polynomials """
+		return any([RuleHelper.denominator(p) != 1 for p in poly.args]) or RuleHelper.denominator(poly) != 1
+
 
 ############################## RULES ##############################	
 # condition, action, description, name
@@ -363,36 +386,36 @@ SIMP5 =	PolyRule(	lambda p: not p.is_polynomial()  and p.cancel() != p,  # TODO:
 					'simp5'
 					)
 SIMP6 =	PolyRule(	lambda x : not x.is_polynomial() and x.as_numer_denom()[0].is_zero , # if rational poly and numerator is zero
-										lambda x : sp.numbers.Zero,
-										""" simp6: if zero exists in a numerator, remove the fraction involved """,
-										'simp6'
+					lambda x : sp.numbers.Zero,
+					""" simp6: if zero exists in a numerator, remove the fraction involved """,
+					'simp6'
 					)
 SIMP7 =	EqnRule(	lambda eq, wm : not eq.left.is_polynomial() and eq.right.is_zero, 
-										lambda eq,wm : RuleHelper.setLHSToNum(eq),
-										""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """,
-										'simp7'
+					lambda eq,wm : RuleHelper.setLHSToNum(eq),
+					""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """,
+					'simp7'
 					)
 SIMP8 =	EqnRule(	lambda eq, wm : eq.right.is_Number and sp.degree(eq.left, gens=x_symb) < 2 and eq.left.coeff(x_symb) != 1 and eq.left.coeff(x_symb**0) == 0, 
-										lambda eq,wm : RuleHelper.simp8Helper(eq),
-										""" if equation has form ax = b, divide by a """,
-										'simp8'
+					lambda eq,wm : RuleHelper.simp8Helper(eq),
+					""" if equation has form ax = b, divide by a """,
+					'simp8'
 					)
 ## TODO: simp9 will become obsolete if we remove simp1
 SIMP9 =	EqnRule(	lambda eq, wm : eq.degree() < 2 and wm.hasGoal(WorkingMem.SET_RHS_ZERO), 
-										lambda eq,wm : wm.removeGoal(WorkingMem.SET_RHS_ZERO),
-										""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal""",
-										'simp9'
+					lambda eq,wm : wm.removeGoal(WorkingMem.SET_RHS_ZERO),
+					""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal""",
+					'simp9'
 					)
 MULT1 =	PolyRule(	lambda p: not p.is_polynomial() and RuleHelper.hasFractionInDenom(p), # both numerator and denominator are rational polynoms
-										lambda p: RuleHelper.mult1Helper(p),
-										""" if denom of rational poly is a fraction, then multiply by its reciprocal """,
-										'mult1'
+					lambda p: RuleHelper.mult1Helper(p),
+					""" if denom of rational poly is a fraction, then multiply by its reciprocal """,
+					'mult1'
 					)
-#MULT2 =	EqnRule(	lambda eq, wm : eq.left.hasFractions() and  (eq.right.hasFractions() or eq.right.is_zero), 
-										#lambda eq,wm : RuleHelper.mult2Helper(eq),
-										#""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """,
-										#'mult2'
-					#)
+MULT2 =	EqnRule(	lambda eq, wm : RuleHelper.polyHasFractions(eq.left)  and  (RuleHelper.polyHasFractions(eq.right) or eq.right.is_zero), 
+					lambda eq,wm : RuleHelper.mult2Helper(eq),
+					""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """,
+					'mult2'
+					)
 #MULT4 =	PolyRule( lambda p: isinstance(p, SumPoly) and p.hasFractions() and len(p.getFractions()) > 1,
 										#RuleHelper.mult4Helper,
 										#""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm""",

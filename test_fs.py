@@ -222,22 +222,18 @@ class SolverRuleTest(unittest.TestCase):
 
 	def test_mult1(self):
 		self.solver.eqn = Eqn('(x+3) / ((3*x+3)/((x+1)*(3*x+3))) = (x+3)')
-		pdb.set_trace()
 		self.assertTrue(MULT1.checkCondition(self.solver.eqn, self.solver.working_mem))
 		MULT1.applyAction(self.solver.eqn, self.solver.working_mem)
 		new_lhs = (x_symb+3)*(x_symb+1)*(3*x_symb+3)/(3*x_symb+3)
 		self.assertEqual(self.solver.eqn.left, new_lhs)
 
-	#def test_mult2(self):
-		#solver = Solver(Eqn('1/(x+1) = 1/(x+3)'))
-		#MULT2.applyAction(solver.eqn, solver.working_mem)
-		## result should be...
-		#left, right = Eqn.strToPolyTree('1/(x+1)'), Eqn.strToPolyTree('1/(x+3)')
-		#left = ProdPoly([left, ProdPoly([self.sp2, self.sp1]) ])
-		#right = ProdPoly([right, ProdPoly([self.sp2, self.sp1]) ])
+	def test_mult2(self):
+		solver = Solver(Eqn('1/(x+1) = 1/(x+3)'))
+		self.assertTrue(MULT2.checkCondition(solver.eqn, solver.working_mem))
+		MULT2.applyAction(solver.eqn, solver.working_mem)
 
-		#self.assertEqual(solver.eqn.left, left)
-		#self.assertEqual(solver.eqn.right, right)
+		self.assertEqual(str(solver.eqn.left), '(x + 1)*(x + 3)/(x + 1)') 
+		self.assertEqual(str(solver.eqn.right), '(x + 1)*(x + 3)/(x + 3)')
 
 	## TODO: test for mult4
 	#def test_mult5(self):
