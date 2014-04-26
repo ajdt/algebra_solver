@@ -313,6 +313,22 @@ class RuleHelper:
 	@staticmethod
 	def isFactored(poly):
 		all([sp.degree(p, gens=x_symb) < 2 for p in poly.args ])
+	@staticmethod
+
+	@staticmethod
+	def numerator(poly): return poly.as_numer_denom()[0]
+
+	@staticmethod
+	def denominator(poly): return poly.as_numer_denom()[1]
+
+	@staticmethod
+	def hasFractionInDenom(poly): # NOTE: if denom has a poly fraction in denom, calling as_numer_denom() will simplify it, so should be unequal
+		num, denom = poly.as_numer_denom()
+		return not (poly == num/denom)
+	@staticmethod
+	def mult1Helper(poly): 
+		num, denom = poly.as_numer_denom()
+		return num/denom
 
 ############################## RULES ##############################	
 # condition, action, description, name
@@ -367,11 +383,11 @@ SIMP9 =	EqnRule(	lambda eq, wm : eq.degree() < 2 and wm.hasGoal(WorkingMem.SET_R
 										""" if SET_RHS_ZERO is a goal and we've reduced problem to linear eqn, then remove this goal""",
 										'simp9'
 					)
-#MULT1 =	PolyRule(	lambda p: isinstance(p, RatPoly) and isinstance(p.denom, RatPoly), 
-										#lambda p: ProdPoly([p.num, p.denom.reciprocal()]),
-										#""" if denom of rational poly is a fraction, the multiply by its reciprocal """,
-										#'mult1'
-					#)
+MULT1 =	PolyRule(	lambda p: not p.is_polynomial() and RuleHelper.hasFractionInDenom(p), # both numerator and denominator are rational polynoms
+										lambda p: RuleHelper.mult1Helper(p),
+										""" if denom of rational poly is a fraction, then multiply by its reciprocal """,
+										'mult1'
+					)
 #MULT2 =	EqnRule(	lambda eq, wm : eq.left.hasFractions() and  (eq.right.hasFractions() or eq.right.is_zero), 
 										#lambda eq,wm : RuleHelper.mult2Helper(eq),
 										#""" if both sides of eqn have fractions, then multiply each side by the lcm over all fractions.  """,

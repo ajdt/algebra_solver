@@ -220,12 +220,13 @@ class SolverRuleTest(unittest.TestCase):
 		SIMP9.applyAction(solver.eqn, solver.working_mem)
 		self.assertFalse(solver.working_mem.hasGoal(WorkingMem.SET_RHS_ZERO))
 
-	#def test_mult1(self):
-		#self.solver.eqn = Eqn('(x+3) / ((3*x+3)/((x+1)*(3*x+3))) = (x+3)')
-		#self.assertTrue(MULT1.checkCondition(self.solver.eqn, self.solver.working_mem))
-		#MULT1.applyAction(self.solver.eqn, self.solver.working_mem)
-		#rp = Eqn.strToPolyTree('(3*x+3)/((x+1)*(3*x+3))')
-		#self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp2, rp.reciprocal()]))
+	def test_mult1(self):
+		self.solver.eqn = Eqn('(x+3) / ((3*x+3)/((x+1)*(3*x+3))) = (x+3)')
+		pdb.set_trace()
+		self.assertTrue(MULT1.checkCondition(self.solver.eqn, self.solver.working_mem))
+		MULT1.applyAction(self.solver.eqn, self.solver.working_mem)
+		new_lhs = (x_symb+3)*(x_symb+1)*(3*x_symb+3)/(3*x_symb+3)
+		self.assertEqual(self.solver.eqn.left, new_lhs)
 
 	#def test_mult2(self):
 		#solver = Solver(Eqn('1/(x+1) = 1/(x+3)'))
