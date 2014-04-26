@@ -251,9 +251,9 @@ class RuleHelper:
 
 	@staticmethod
 	def getRHSNonConstLHSConst(eqn):
-		""" return a polynomial of const terms on lhs and non_const terms on rhs """
-		const_terms = filter(lambda x: x.is_Number, eqn.right.as_ordered_terms()) 
-		var_terms = filter(lambda x: not x.is_Number, eqn.right.as_ordered_terms()) 
+		""" @return: a polynomial of const terms on lhs and non_const terms on rhs or zero if there are no terms"""
+		const_terms	= filter(lambda x: x.is_Number, eqn.left.as_ordered_terms()) 
+		var_terms	= filter(lambda x: not x.is_Number, eqn.right.as_ordered_terms()) 
 		return sp.add.Add.fromiter(const_terms + var_terms)
 
 	@staticmethod
@@ -331,11 +331,11 @@ SIMP2 =	PolyRule(	lambda x : x.is_Add and not (x.collect(x_symb) == x),  # colle
 					""" simp2: if sumpoly has common terms, then add them together """,
 					'simp2'
 					)
-#SIMP3 =	EqnRule(	lambda eq, wm : eq.degree() == 1 and len(RuleHelper.getRHSNonConstLHSConst(eq)) > 0,
-					#lambda eq, wm : RuleHelper.moveConstRHSNonConstLHS(eq),
-					#""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """,
-					#'simp3'
-					#)
+SIMP3 =	EqnRule(	lambda eq, wm : eq.degree() == 1 and not RuleHelper.getRHSNonConstLHSConst(eq).is_zero,
+					lambda eq, wm : RuleHelper.moveConstRHSNonConstLHS(eq),
+					""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """,
+					'simp3'
+					)
 #SIMP4 =	EqnRule(	lambda eq, wm : wm.hasGoal(WorkingMem.SET_RHS_ZERO) and not eq.right.is_zero,
 					#lambda eq, wm : RuleHelper.subtractFromEqn(eq, eq.right),
 					#""" if our goal is to set rhs to zero, then subtract all rhs terms from lhs""",

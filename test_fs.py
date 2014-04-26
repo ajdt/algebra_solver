@@ -166,14 +166,16 @@ class SolverRuleTest(unittest.TestCase):
 		self.assertTrue(SIMP2.checkCondition(self.solver.eqn, self.solver.working_mem))
 		SIMP2.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(self.solver.eqn.left, 2*x_symb + 4 )
-	#def test_simp3(self):
-		#self.solver.eqn = Eqn('3*x + 3 = x +1')
-		#self.assertTrue(SIMP3.checkCondition(self.solver.eqn, self.solver.working_mem))
-		#SIMP3.applyAction(self.solver.eqn, self.solver.working_mem)
-		#left = SumPoly([self.sp3, StdPoly(-1*x_symb-3)])
-		#right = SumPoly([self.sp1, StdPoly(-3-1*x_symb)])
-		#self.assertEqual(str(self.solver.eqn.left), str(left)) # (3x + 2 - x -2 )
-		#self.assertEqual(self.solver.eqn.right, right) # (x + 1 -2 -x)
+	def test_simp3(self):
+		self.solver.eqn = Eqn('3*x + 3 = x +1')
+		self.assertTrue(SIMP3.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP3.applyAction(self.solver.eqn, self.solver.working_mem)
+
+		# expected results
+		left	= sp.sympify('3*x + 3 -x -3 ', evaluate=False)
+		right	= sp.sympify('x + 1 -x -3 ', evaluate=False)
+		self.assertEqual(str(self.solver.eqn.left), str(left)) # (3x + 2 - x -2 )
+		self.assertEqual(self.solver.eqn.right, right) # (x + 1 -2 -x)
 
 		#solver = Solver(Eqn('3*x**2 = 0'))
 		#self.assertFalse( SIMP3.checkCondition(solver.eqn, solver.working_mem))
