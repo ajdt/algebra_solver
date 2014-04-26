@@ -196,6 +196,12 @@ class SolverRuleTest(unittest.TestCase):
 		comp_to = sp.sympify('1/(x+1)', evaluate=False)
 		self.solver.eqn.left == comp_to
 		self.assertEqual(str(self.solver.eqn.left),str(comp_to)) # TODO: have to compare as strings due to hashable_content() issue, tuples have same content but reordered
+	def test_simp6(self):
+		self.solver.eqn = Eqn('0/(x**2+3*x+3) = (x+3)')
+		self.assertTrue(SIMP6.checkCondition(self.solver.eqn, self.solver.working_mem))
+		SIMP5.applyAction(self.solver.eqn, self.solver.working_mem)
+		self.solver.eqn.left == sp.numbers.Zero
+		self.assertTrue(self.solver.eqn.left.is_zero) 
 
 	#def test_mult1(self):
 		#self.solver.eqn = Eqn('(x+3) / ((3*x+3)/((x+1)*(3*x+3))) = (x+3)')

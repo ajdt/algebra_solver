@@ -346,11 +346,11 @@ SIMP5 =	PolyRule(	lambda p: not p.is_polynomial()  and p.cancel() != p,  # TODO:
 					""" simp5: if num and denom of a rational polynomial have common factors, then cancel these factors """,
 					'simp5'
 					)
-#SIMP6 =	PolyRule(	lambda x : isinstance(x, RatPoly) and x.num.is_zero , 
-										#lambda x : StdPoly.zero(),
-										#""" simp6: if zero exists in a numerator, remove the fraction involved """,
-										#'simp6'
-					#)
+SIMP6 =	PolyRule(	lambda x : not x.is_polynomial() and x.as_numer_denom()[0].is_zero , # if rational poly and numerator is zero
+										lambda x : sp.numbers.Zero,
+										""" simp6: if zero exists in a numerator, remove the fraction involved """,
+										'simp6'
+					)
 #SIMP7 =	EqnRule(	lambda eq, wm : isinstance(eq.left, RatPoly) and eq.right.is_zero, 
 										#lambda eq,wm : RuleHelper.setLHSToNum(eq),
 										#""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """,
