@@ -311,21 +311,21 @@ class RuleHelper:
 
 ############################## RULES ##############################	
 # condition, action, description, name
-#SIMP0 =	PolyRule(	lambda x : isinstance(x, SumPoly) and any([p.is_zero for p in x.subpoly]), 
-										#RuleHelper._removeZeroes,
-										#""" simp0: if zeroes exist as additive terms, then remove them """,
-										#'simp0'
-					#)
-#SIMP1 =	EqnRule(	lambda eq, wm : eq.degree() >= 2 and not wm.hasGoal(WorkingMem.SET_RHS_ZERO), # TODO: remove this rule and add check to other simp rules instead!
-					#lambda eq, wm : wm.addGoal(WorkingMem.SET_RHS_ZERO),
-					#""" simp1: if degree is >= 2, then set working mem goal to make rhs zero """,
-					#'simp1'
-					#)
-#SIMP2 =	PolyRule(	lambda x : isinstance(x, SumPoly) and SumPoly.hasCommonTerms(x), 
-										#SumPoly.sumCommonTerms,
-										#""" simp2: if sumpoly has common terms, then add them together """,
-										#'simp2'
-					#)
+SIMP0 =	PolyRule(	lambda x : x.is_Add and any([p.is_zero for p in x.args]), 
+					RuleHelper._removeZeroes,
+					""" simp0: if zeroes exist as additive terms, then remove them """,
+					'simp0'
+					)
+SIMP1 =	EqnRule(	lambda eq, wm : eq.degree() >= 2 and not wm.hasGoal(WorkingMem.SET_RHS_ZERO), # TODO: remove this rule and add check to other simp rules instead!
+					lambda eq, wm : wm.addGoal(WorkingMem.SET_RHS_ZERO),
+					""" simp1: if degree is >= 2, then set working mem goal to make rhs zero """,
+					'simp1'
+					)
+SIMP2 =	PolyRule(	lambda x : x.is_Add and not (x.collect(x_symb) == x),  # collect adds like terms
+					lambda x: x.collect(x_symb),
+					""" simp2: if sumpoly has common terms, then add them together """,
+					'simp2'
+					)
 #SIMP3 =	EqnRule(	lambda eq, wm : eq.degree() == 1 and len(RuleHelper.getRHSNonConstLHSConst(eq)) > 0,
 					#lambda eq, wm : RuleHelper.moveConstRHSNonConstLHS(eq),
 					#""" if solving a linear eqn, cancel all constant terms on the lhs and all non-constant terms on the rhs """,

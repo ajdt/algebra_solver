@@ -137,16 +137,16 @@ import pdb
 
 #class SolverRuleTest(unittest.TestCase):
 	#def setUp(self):
-		#self.sp1 = StdPoly(x_symb + 1) # (x + 1)
-		#self.sp2 = StdPoly(x_symb + 3) # (x + 3)
-		#self.sp3 = StdPoly(3*x_symb + 3) # (3x + 3)
-		#self.sp4 = StdPoly(x_symb**2 + 4*x_symb + 3) # (x^2 + 4x + 3)
-		#self.sp5 = StdPoly(x_symb**2 + 2*x_symb + 3) # (x^2 + 2x + 3) , for completing the square test
-		#self.sp6 = StdPoly(x_symb**3 + x_symb**2 + -9*x_symb + -9) # (x^3 + x^2 -9x -9 )
-		#self.sp7 = StdPoly(1*x_symb + -3) # (x - 3)
-		#self.sp8 = StdPoly(1*x_symb**3 + 5*x_symb**2 + x_symb + 5) # (x^3 + 5x^2 +x +5 )
-		#self.sp9 = StdPoly(x_symb + 5) # (x + 3)
-		#self.sp10 = StdPoly(x_symb**2 + 1) # (x^2 + 1)
+		#self.sp1 = x_symb + 1 # (x + 1)
+		#self.sp2 = x_symb + 3 # (x + 3)
+		#self.sp3 = 3*x_symb + 3 # (3x + 3)
+		#self.sp4 = x_symb**2 + 4*x_symb + 3 # (x^2 + 4x + 3)
+		#self.sp5 = x_symb**2 + 2*x_symb + 3 # (x^2 + 2x + 3) , for completing the square test
+		#self.sp6 = x_symb**3 + x_symb**2 + -9*x_symb + -9 # (x^3 + x^2 -9x -9 )
+		#self.sp7 = 1*x_symb + -3 # (x - 3)
+		#self.sp8 = 1*x_symb**3 + 5*x_symb**2 + x_symb + 5 # (x^3 + 5x^2 +x +5 )
+		#self.sp9 = x_symb + 5 # (x + 3)
+		#self.sp10 = x_symb**2 + 1 # (x^2 + 1)
 		#self.solver = Solver(Eqn('x+1 = x+3'))
 
 	#def test_simp0(self):
