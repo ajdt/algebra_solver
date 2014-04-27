@@ -404,7 +404,7 @@ SIMP7 =	EqnRule(	lambda eq, wm : not eq.left.is_polynomial() and eq.right.is_zer
 					""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """,
 					'simp7'
 					)
-SIMP8 =	EqnRule(	lambda eq, wm : eq.right.is_Number and sp.degree(eq.left, gens=x_symb) < 2 and eq.left.coeff(x_symb) != 1 and eq.left.coeff(x_symb**0) == 0, 
+SIMP8 =	EqnRule(	lambda eq, wm : eq.right.is_Number and eq.left.is_Mul and sp.degree(eq.left, gens=x_symb) == 1 and eq.left.coeff(x_symb) != 1 , 
 					lambda eq,wm : RuleHelper.simp8Helper(eq),
 					""" if equation has form ax = b, divide by a """,
 					'simp8'
