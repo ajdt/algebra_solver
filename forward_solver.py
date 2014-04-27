@@ -175,7 +175,8 @@ class PolyRule(EqnRule):
 			return (sp.add.Add.fromiter(new_polys), any(bools))
 		elif poly.is_Mul :
 			# recursively try every subpoly, generate a new Add poly from their result, and return true if any of the subpolys had the rule applied to it
-			new_polys, bools = map(list, zip(*sorted( self._applyActionRecursive(p) for p in poly.args )))
+			recursive_apply = [self._applyActionRecursive(p) for p in poly.args]
+			new_polys, bools = [res[0] for res in recursive_apply], [res[1] for res in recursive_apply]
 			return (sp.mul.Mul.fromiter(new_polys), any(bools))
 		else:
 			return (poly, False)
@@ -374,7 +375,7 @@ SIMP1 =	EqnRule(	lambda eq, wm : eq.degree() >= 2 and not wm.hasGoal(WorkingMem.
 					""" simp1: if degree is >= 2, then set working mem goal to make rhs zero """,
 					'simp1'
 					)
-SIMP2 =	PolyRule(	lambda x : x.is_Add and not (x.collect(x_symb) == x),  # collect adds like terms
+SIMP2 =	PolyRule(	lambda x : x.is_Add and not (len(x.collect(x_symb).args) == len(x.args)),  # collect adds like terms
 					lambda x: x.collect(x_symb),
 					""" simp2: if sumpoly has common terms, then add them together """,
 					'simp2'

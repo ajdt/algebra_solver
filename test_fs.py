@@ -67,24 +67,17 @@ class SampleCasesTest(unittest.TestCase):
 		steps = solver.solve()
 		self.assertEqual(steps, expected_steps)
 		self.assertEqual(str(solver.eqn), 'x=1')
-	#def test_solve2(self):
-		#solver = Solver(Eqn('10*x + 3 = 10 + 3*x'))
-		#expected_steps = 	[	'10*x + 3=3*x + 10: solve',
-								#'-3*x + -3 + 10*x + 3=-3*x + -3 + 3*x + 10: simp3',
-								#'7*x + 3 + -3=-3*x + -3 + 3*x + 10: simp2',
-								#'7*x=-3*x + -3 + 3*x + 10: simp2',
-								#'7*x=10 + -3: simp2',
-								#'x=(10 + -3)/(7): simp8',
-								#'x=(10 + -3)/(7): win2'
-							#]
-		#print "##############################"
-		#for s in expected_steps:
-			#print s
-		#print "------------------------------"
-		#for s in steps:
-			#print s
-		#print "##############################"
-		#self.assertEqual(solver.solve(), expected_steps)
+	def test_solve2(self):
+		solver = Solver(Eqn('10*x + 3 = 10 + 3*x'))
+		expected_steps = 	[	'10*x + 3=3*x + 10: solve', 
+								'-3*x + 10*x - 3 + 3=-3*x + 3*x - 3 + 10: simp3', 
+								'7*x=-3*x + 3*x - 3 + 10: simp2', 
+								'7*x=7: simp2',
+								'x=1: simp8', 
+								'x=1: win2'
+							]
+		steps = solver.solve()
+		self.assertEqual(steps, expected_steps)
 	#def test_solve3(self):
 		#solver = Solver(Eqn('3*x + x**2 = 3 + x**2'))
 		#expected_steps = 	[	'x**2 + 3*x=x**2 + 3: solve',
@@ -99,6 +92,14 @@ class SampleCasesTest(unittest.TestCase):
 								#'x=(3)/(3): win2'
 							#]
 		#steps = solver.solve()
+		#print "##############################"
+		#for s in expected_steps:
+			#print s
+		#print "------------------------------"
+		#for s in steps:
+			#print s
+		#print steps
+		#print "##############################"
 		#self.assertEqual(steps, expected_steps)
 
 	#def test_solve4(self):
