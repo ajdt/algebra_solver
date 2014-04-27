@@ -229,7 +229,7 @@ class RuleHelper:
 			raise TypeError
 
 		factored_poly = std_poly.factor()
-		if isinstance(poly, sp.Mul): # factoring was successful
+		if isinstance(factored_poly, sp.Mul): # factoring was successful
 			return (factored_poly, True)
 		else:
 			return (std_poly, False)
@@ -361,6 +361,10 @@ class RuleHelper:
 	def polyHasFractions(poly): 
 		""" return true if polynomial is or has rational polynomials """
 		return any([RuleHelper.denominator(p) != 1 for p in poly.args]) or RuleHelper.denominator(poly) != 1
+	@staticmethod
+	def isMonomial(poly): return poly.is_Number or poly.is_Symbol or all( [ p.is_Number or p.is_Symbol for p in poly.args])
+	@staticmethod
+	def isStdpoly(poly): return poly.is_Number or poly.is_Symbol or ( poly.is_Add and all( [ RuleHelper.isMonomial(p) for p in poly.args]) )
 
 
 ############################## RULES ##############################	
@@ -438,11 +442,11 @@ MULT5 =	PolyRule(lambda p: p.is_Mul and p.is_polynomial() and len([q for q in p.
 					'mult5'
 					)
 
-#HEUR1 =	PolyRule(lambda p:  isinstance(p, StdPoly) and p.degree() == 2 and isinstance(p.factor(x_symb), sp.Mul) # TODO: look for is_factorable() method
-									#,lambda p : RuleHelper.factor(p)[0]
-									#,""" if a 2nd degree polynomial occurs anywhere, then attempt to factor it """,
-									#'heur1'
-									#)
+HEUR1 =	PolyRule(lambda p:  RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb) == 2 and p.factor(x_symb).is_Mul # TODO: look for is_factorable() method
+				,lambda p : RuleHelper.factor(p)[0]
+				,""" if a 2nd degree polynomial occurs anywhere, then attempt to factor it """,
+				'heur1'
+				)
 
 #HEUR2 =	PolyRule(lambda p: isinstance(p, StdPoly) and p.degree() == 2 and RuleHelper.completeSquare(p)[1]
 									#,lambda p : RuleHelper.completeSquare(p)[0]

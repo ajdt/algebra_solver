@@ -248,11 +248,11 @@ class SolverRuleTest(unittest.TestCase):
 		MULT5.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(str(self.solver.eqn.left), 'x**2 + x + 3*x + 3') 
 
-	#def test_heur1(self):
-		#self.solver.eqn = Eqn('(x**2 + 4*x + 3) = 3*x + 3')
-		#self.assertTrue(HEUR1.checkCondition(self.solver.eqn, self.solver.working_mem))
-		#HEUR1.applyAction(self.solver.eqn, self.solver.working_mem)
-		#self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp1, self.sp2]))
+	def test_heur1(self):
+		self.solver.eqn = Eqn('(x**2 + 4*x + 3) = 3*x + 3')
+		self.assertTrue(HEUR1.checkCondition(self.solver.eqn, self.solver.working_mem))
+		HEUR1.applyAction(self.solver.eqn, self.solver.working_mem)
+		self.assertEqual(str(self.solver.eqn.left), '(x + 1)*(x + 3)')
 
 	#def test_heur2(self):
 		#self.solver.eqn = Eqn('x**2 + 2*x + 3 = 3*x + 3')
