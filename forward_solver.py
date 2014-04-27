@@ -364,9 +364,7 @@ class RuleHelper:
 		""" return true if polynomial is or has rational polynomials """
 		return any([RuleHelper.denominator(p) != 1 for p in poly.args]) or RuleHelper.denominator(poly) != 1
 	@staticmethod
-	def isMonomial(poly): return poly.is_Number or poly.is_Symbol or all( [ p.is_Number or p.is_Symbol for p in poly.args])
-	@staticmethod
-	def isStdpoly(poly): return poly.is_Number or poly.is_Symbol or ( poly.is_Add and all( [ RuleHelper.isMonomial(p) for p in poly.args]) )
+	def isStdpoly(poly): return sp.Poly(poly, x_symb).is_monomial  or ( poly.is_Add and all( [ sp.Poly(p,x_symb).is_monomial for p in poly.args]) )
 
 
 ############################## RULES ##############################	
@@ -456,11 +454,11 @@ HEUR2 =	PolyRule(lambda p: RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb)
 				'heur2'
 				)
 
-#HEUR3 =	PolyRule(lambda p: p.degree() == 3 and isinstance(p, StdPoly) and RuleHelper.factorCubic(p)[1]
-									#,lambda p : RuleHelper.factorCubic(p)[0]
-									#,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """,
-									#'heur3'
-				#)
+HEUR3 =	PolyRule(lambda p: sp.degree(p, gens=x_symb) == 3 and RuleHelper.isStdpoly(p) and RuleHelper.factor(p)[1]
+				,lambda p : RuleHelper.factor(p)[0]
+				,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """,
+				'heur3'
+				)
 
 ## TODO: see if this rule can be written with other fraction rules
 #HEUR4 =	PolyRule(lambda p:  isinstance(p, StdPoly) and p.degree() == 2 and p.coeff_monomial(x_symb)==0 and p.coeff_monomial(x_symb**0) < 0	 # TODO: look for is_factorable() method

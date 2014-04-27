@@ -260,18 +260,18 @@ class SolverRuleTest(unittest.TestCase):
 		HEUR2.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(str(self.solver.eqn.left), '(x + 1)*(x + 1) + 2') 
 
-	#def test_heur3(self):
-		## factor down to linear terms
-		#self.solver.eqn = Eqn('x**3 + x**2 - 9*x - 9 = 3*x + 3')
-		#self.assertTrue(HEUR3.checkCondition(self.solver.eqn, self.solver.working_mem))
-		#HEUR3.applyAction(self.solver.eqn, self.solver.working_mem)
-		#self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp1, self.sp2, self.sp7]))
+	def test_heur3(self):
+		# factor down to linear terms
+		self.solver.eqn = Eqn('x**3 + x**2 - 9*x - 9 = 3*x + 3')
+		self.assertTrue(HEUR3.checkCondition(self.solver.eqn, self.solver.working_mem))
+		HEUR3.applyAction(self.solver.eqn, self.solver.working_mem)
+		self.assertEqual(str(self.solver.eqn.left), '(x - 3)*(x + 1)*(x + 3)')
 
-		## factor when can't reduce a quadratic term
-		#self.solver.eqn = Eqn('x**3 + 5*x**2 + x  + 5 = 3*x+3')
-		#self.assertTrue(HEUR3.checkCondition(self.solver.eqn, self.solver.working_mem))
-		#HEUR3.applyAction(self.solver.eqn, self.solver.working_mem)
-		#self.assertEqual(self.solver.eqn.left, ProdPoly([self.sp9, self.sp10]))
+		# factor when can't reduce a quadratic term
+		self.solver.eqn = Eqn('x**3 + 5*x**2 + x  + 5 = 3*x+3')
+		self.assertTrue(HEUR3.checkCondition(self.solver.eqn, self.solver.working_mem))
+		HEUR3.applyAction(self.solver.eqn, self.solver.working_mem)
+		self.assertEqual(str(self.solver.eqn.left), '(x + 5)*(x**2 + 1)')
 
 #class RuleHelperTest(unittest.TestCase):
 	#def test_computeLCM(self):
