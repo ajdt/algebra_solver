@@ -209,11 +209,13 @@ class RuleHelper:
 		if not poly.is_Add:
 			raise TypeError
 		# TODO: for now assumes a = 1, to avoid fractions
-		x_coef, const_coef = poly.coeff(x_symb)**2/4, poly.coeff(x_symb**0)
+		x_coef, const_coef = poly.coeff(x_symb)**2/4, poly.as_coefficients_dict()[sp.sympify(1)] # TODO: why does coeff(x_symb**0) not work as expected? (doesn't return constant coeff)
 
-		factored_poly = (std_poly - const_coef + x_coef).factor()
+		factored_poly = (poly - const_coef + x_coef).factor()
 		if factored_poly.is_Pow: # factoring was successful
-			return (factored_poly + (const_coef - x_coef), True)
+			new_poly, _ = factored_poly.as_base_exp()
+			new_poly_str = '(' + str(new_poly) + ')*(' + str(new_poly) + ') + ' + str(const_coef - x_coef)  # TODO: write helper method, to simplify this line
+			return (sp.sympify(new_poly_str, evaluate=False), True)
 		else:
 			return (poly, False)
 
@@ -448,11 +450,11 @@ HEUR1 =	PolyRule(lambda p:  RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb
 				'heur1'
 				)
 
-#HEUR2 =	PolyRule(lambda p: isinstance(p, StdPoly) and p.degree() == 2 and RuleHelper.completeSquare(p)[1]
-									#,lambda p : RuleHelper.completeSquare(p)[0]
-									#,""" if a 2nd degree polynomial occurs anywhere, then factor it by completing the square """,
-									#'heur2'
-									#)
+HEUR2 =	PolyRule(lambda p: RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb) == 2 and RuleHelper.completeSquare(p)[1]
+				,lambda p : RuleHelper.completeSquare(p)[0]
+				,""" if a 2nd degree polynomial occurs anywhere, then factor it by completing the square """,
+				'heur2'
+				)
 
 #HEUR3 =	PolyRule(lambda p: p.degree() == 3 and isinstance(p, StdPoly) and RuleHelper.factorCubic(p)[1]
 									#,lambda p : RuleHelper.factorCubic(p)[0]

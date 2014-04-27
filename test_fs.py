@@ -254,11 +254,11 @@ class SolverRuleTest(unittest.TestCase):
 		HEUR1.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(str(self.solver.eqn.left), '(x + 1)*(x + 3)')
 
-	#def test_heur2(self):
-		#self.solver.eqn = Eqn('x**2 + 2*x + 3 = 3*x + 3')
-		#self.assertTrue(HEUR2.checkCondition(self.solver.eqn, self.solver.working_mem))
-		#HEUR2.applyAction(self.solver.eqn, self.solver.working_mem)
-		#self.assertEqual(str(self.solver.eqn.left), str(SumPoly([ProdPoly([self.sp1, self.sp1]), StdPoly(2, x_symb)])))
+	def test_heur2(self):
+		self.solver.eqn = Eqn('x**2 + 2*x + 3 = 3*x + 3')
+		self.assertTrue(HEUR2.checkCondition(self.solver.eqn, self.solver.working_mem))
+		HEUR2.applyAction(self.solver.eqn, self.solver.working_mem)
+		self.assertEqual(str(self.solver.eqn.left), '(x + 1)*(x + 1) + 2') 
 
 	#def test_heur3(self):
 		## factor down to linear terms
