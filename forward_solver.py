@@ -488,44 +488,44 @@ class Solver:
 
 	############################### checking and solving ##############################
 	### list of rules and precedences they take
-	#SIMP_RULES		= [SIMP6,SIMP7, SIMP8, SIMP0, SIMP1, SIMP2, SIMP3, SIMP4, SIMP5, SIMP9 ]
-	#WIN_RULES		= [win1, win2, win3]
-	#MULT_RULES		= [MULT1, MULT2, MULT4, MULT5]
-	#MISC_RULES		= []
-	#HEURISTICS		= [HEUR1, HEUR2, HEUR3, HEUR4]
-	#ALL_RULES 		= [SIMP_RULES, HEURISTICS, MULT_RULES, MISC_RULES ]
-	#RULE_ORDERING 	= SIMP_RULES + HEURISTICS + MULT_RULES + MISC_RULES 
+	SIMP_RULES		= [SIMP6,SIMP7, SIMP8, SIMP0, SIMP1, SIMP2, SIMP3, SIMP4, SIMP5, SIMP9 ]
+	WIN_RULES		= [win1, win2, win3]
+	MULT_RULES		= [MULT1, MULT2, MULT4, MULT5]
+	MISC_RULES		= []
+	HEURISTICS		= [HEUR1, HEUR2, HEUR3, HEUR4]
+	ALL_RULES 		= [SIMP_RULES, HEURISTICS, MULT_RULES, MISC_RULES ]
+	RULE_ORDERING 	= SIMP_RULES + HEURISTICS + MULT_RULES + MISC_RULES 
 
 	### solve the problem
-	#def solve(self):
-		#"""solve the equation given, return steps to the solution"""
-		#self.working_mem.steps.append(str(self.eqn) + ': ' + self.solve.__name__)
-		#while not self.checkWinCond():
-			#triggered_rules = self.getTriggeredRules()
-			#if len(triggered_rules) == 0 : # stuck, there's no more todo
-				#break
+	def solve(self):
+		"""solve the equation given, return steps to the solution"""
+		self.working_mem.steps.append(str(self.eqn) + ': ' + self.solve.__name__)
+		while not self.checkWinCond():
+			triggered_rules = self.getTriggeredRules()
+			if len(triggered_rules) == 0 : # stuck, there's no more todo
+				break
 
-			## select a rule and apply it
-			#applied_rule = self.selectRule(triggered_rules)
-			#applied_rule.applyAction(self.eqn, self.working_mem)
-			#self.working_mem.addStep(self.eqn, applied_rule) 
-		#return self.working_mem.steps
+			# select a rule and apply it
+			applied_rule = self.selectRule(triggered_rules)
+			applied_rule.applyAction(self.eqn, self.working_mem)
+			self.working_mem.addStep(self.eqn, applied_rule) 
+		return self.working_mem.steps
 
-	#def checkWinCond(self):
-		#""" check win conditions """
-		## if any win condition is active, then we've solved the equation
-		#for rule in self.WIN_RULES:
-			#if rule(self) :
-				##print "win condition " + rule.__name__ + " applies"
-				#self.working_mem.addStep( self.eqn, rule)
-				#return True
-		#return False
+	def checkWinCond(self):
+		""" check win conditions """
+		# if any win condition is active, then we've solved the equation
+		for rule in self.WIN_RULES:
+			if rule(self) :
+				#print "win condition " + rule.__name__ + " applies"
+				self.working_mem.addStep( self.eqn, rule)
+				return True
+		return False
 
-	#def getTriggeredRules(self):
-		#"""@return: list of all rules triggered by current game state"""
-		#return [ rule for rule in Solver.RULE_ORDERING if rule.checkCondition(self.eqn, self.working_mem) ]
+	def getTriggeredRules(self):
+		"""@return: list of all rules triggered by current game state"""
+		return [ rule for rule in Solver.RULE_ORDERING if rule.checkCondition(self.eqn, self.working_mem) ]
 
-	#def selectRule(self, triggered_rules): return min(triggered_rules, key=self.rule_ordering)
+	def selectRule(self, triggered_rules): return min(triggered_rules, key=self.rule_ordering)
 
 #class SuperSolver():
 	#def __init__(self, eqn_str):
