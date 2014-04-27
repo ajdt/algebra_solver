@@ -238,17 +238,15 @@ class SolverRuleTest(unittest.TestCase):
 	def test_mult4(self):
 		solver = Solver(Eqn('1/(x+1) + 1/(x+3) = 0 '))
 		self.assertTrue(MULT4.checkCondition(solver.eqn, solver.working_mem))
-		pdb.set_trace()
 		MULT4.applyAction(solver.eqn, solver.working_mem)
 
 		self.assertEqual(str(solver.eqn.left), '(x + 3)/((x + 1)*(x + 3)) + (x + 1)/((x + 1)*(x + 3))') 
 
-	## TODO: test for mult4
-	#def test_mult5(self):
-		#self.solver.eqn = Eqn('(x+1)*(x+3) = 3*x+3')
-		#self.assertTrue(MULT5.checkCondition(self.solver.eqn, self.solver.working_mem))
-		#MULT5.applyAction(self.solver.eqn, self.solver.working_mem)
-		#self.assertEqual(self.solver.eqn.left, StdPoly(1*x_symb**2 + 3*x_symb + 1*x_symb + 3) ) # x^2 + 3x + x + 3
+	def test_mult5(self):
+		self.solver.eqn = Eqn('(x+1)*(x+3) = 3*x+3')
+		self.assertTrue(MULT5.checkCondition(self.solver.eqn, self.solver.working_mem))
+		MULT5.applyAction(self.solver.eqn, self.solver.working_mem)
+		self.assertEqual(str(self.solver.eqn.left), 'x**2 + x + 3*x + 3') 
 
 	#def test_heur1(self):
 		#self.solver.eqn = Eqn('(x**2 + 4*x + 3) = 3*x + 3')

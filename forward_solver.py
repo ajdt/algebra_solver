@@ -257,12 +257,20 @@ class RuleHelper:
 		return sp.add.Add.fromiter(ls)
 
 	@staticmethod
+	def multTwoPolys(p1, p2):
+		# NOTE: this method required to avoid autosimplification when multiplying polys
+		if not p1.is_Add or not p2.is_Add:
+			return p1*p2
+		products = [r*s for r in p1.args for s in p2.args]
+		return sp.sympify( ' + '.join(map(str, products)), evaluate=False)
+
+
+	@staticmethod
 	def mult5Helper(prod_poly):
 		""" foil all terms in the product poly """
 		if not prod_poly.is_Mul or not prod_poly.is_polynomial: #  ensure this is not a fraction also
 			raise TypeError
-		# multiply all polynoms together, then convert to an expression
-		return reduce(__mul__, [sp.Poly(p) for p in prod_poly.args]).as_expr() 
+		return reduce(RuleHelper.multTwoPolys, prod_poly.args)
 
 	@staticmethod
 	def getRHSNonConstLHSConst(eqn):
@@ -419,15 +427,16 @@ MULT2 =	EqnRule(	lambda eq, wm : RuleHelper.polyHasFractions(eq.left)  and  (Rul
 					'mult2'
 					)
 MULT4 =	PolyRule( lambda p: p.is_Add and RuleHelper.polyHasFractions(p),
-										RuleHelper.mult4Helper,
-										""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm""",
-										'mult4'
-									)
-#MULT5 =	PolyRule(lambda p: isinstance(p, ProdPoly) and len([poly for poly in p.subpoly if not poly.isConstTerm()]) > 1, # there must be at least two non constant terms for this to make sense
-									#RuleHelper.mult5Helper,
-									#""" if a there is a product polynomial, then foil the first two factors""",
-									#'mult5'
-									#)
+					RuleHelper.mult4Helper,
+					""" if a polynomial is a sum over rational polynomials, then multiply every polynomial by lcm/lcm""",
+					'mult4'
+					)
+# there must be at least two non constant terms for this to make sense
+MULT5 =	PolyRule(lambda p: p.is_Mul and p.is_polynomial() and len([q for q in p.args if not (q.is_Number or q.is_Symbol) ]) > 1, 
+					RuleHelper.mult5Helper,
+					""" if a there is a product polynomial, then foil all the factors""",
+					'mult5'
+					)
 
 #HEUR1 =	PolyRule(lambda p:  isinstance(p, StdPoly) and p.degree() == 2 and isinstance(p.factor(x_symb), sp.Mul) # TODO: look for is_factorable() method
 									#,lambda p : RuleHelper.factor(p)[0]
