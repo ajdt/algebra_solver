@@ -330,12 +330,9 @@ class RuleHelper:
 		XXX: assumes poly is in standard form
 		"""
 		# TODO: refactor conversion to ProdPoly (repeated in factor() function
-		if not isinstance(std_poly, StdPoly):
-			raise TypeError
-
-		quad_coeff, const_coef = std_poly.coeff(x_symb**2), std_poly.coeff(x_symb**0)
+		quad_coeff, const_coeff = std_poly.coeff(x_symb**2), sp.Poly(std_poly).coeff_monomial(x_symb**0)
 		factored_poly = std_poly.factor(extension=sp.sqrt(abs(const_coeff))/sp.sqrt(quad_coeff))
-		if isinstance(factored_poly, sp.Mul): # factoring was successful
+		if factored_poly.is_Mul: # factoring was successful
 			return (factored_poly, True)
 		else:
 			return (std_poly, False)
@@ -461,11 +458,11 @@ HEUR3 =	PolyRule(lambda p: sp.degree(p, gens=x_symb) == 3 and RuleHelper.isStdpo
 				)
 
 ## TODO: see if this rule can be written with other fraction rules
-#HEUR4 =	PolyRule(lambda p:  isinstance(p, StdPoly) and p.degree() == 2 and p.coeff_monomial(x_symb)==0 and p.coeff_monomial(x_symb**0) < 0	 # TODO: look for is_factorable() method
-									#,lambda p : RuleHelper.heur4Helper(p)[0]
-									#,""" if a polynomial of the form ax**2 -b occurs anywhere, then factor it as (x + sqrt(a/b)) (x - sqrt(a/b)) """,
-									#'heur4'
-									#)
+HEUR4 =	PolyRule(lambda p:  RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb) == 2 and p.coeff(x_symb)==0 and sp.Poly(p).coeff_monomial(x_symb**0) < 0	 
+				,lambda p : RuleHelper.heur4Helper(p)[0]
+				,""" if a polynomial of the form ax**2 -b occurs anywhere, then factor it as (x + sqrt(a/b)) (x - sqrt(a/b)) """,
+				'heur4'
+				)
 class Solver:
 	def __init__(self, eqn, rule_ord=lambda rule: Solver.RULE_ORDERING.index(rule)): 
 		self.eqn, self.working_mem	= eqn, WorkingMem()

@@ -272,6 +272,12 @@ class SolverRuleTest(unittest.TestCase):
 		self.assertTrue(HEUR3.checkCondition(self.solver.eqn, self.solver.working_mem))
 		HEUR3.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(str(self.solver.eqn.left), '(x + 5)*(x**2 + 1)')
+	
+	def test_heur4(self):
+		self.solver.eqn = Eqn('x**2 - 25 = 0')
+		self.assertTrue(HEUR4.checkCondition(self.solver.eqn, self.solver.working_mem))
+		HEUR4.applyAction(self.solver.eqn, self.solver.working_mem)
+		self.assertEqual(str(self.solver.eqn.left), '(x - 5)*(x + 5)')
 
 #class RuleHelperTest(unittest.TestCase):
 	#def test_computeLCM(self):
