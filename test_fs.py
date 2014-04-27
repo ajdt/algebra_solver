@@ -78,29 +78,20 @@ class SampleCasesTest(unittest.TestCase):
 							]
 		steps = solver.solve()
 		self.assertEqual(steps, expected_steps)
-	#def test_solve3(self):
-		#solver = Solver(Eqn('3*x + x**2 = 3 + x**2'))
-		#expected_steps = 	[	'x**2 + 3*x=x**2 + 3: solve',
-								#'x**2 + 3*x=x**2 + 3: simp1',
-								#'x**2 + 3*x + -x**2 - 3=x**2 + 3 + -x**2 - 3: simp4',
-								#'3*x - 3=x**2 + 3 + -x**2 - 3: simp2',
-								#'3*x - 3=0: simp2',
-								#'3*x - 3 + 3=0 + 3: simp3',
-								#'3*x - 3 + 3=3: simp0',
-								#'3*x=3: simp2',
-								#'x=(3)/(3): simp8',
-								#'x=(3)/(3): win2'
-							#]
-		#steps = solver.solve()
-		#print "##############################"
-		#for s in expected_steps:
-			#print s
-		#print "------------------------------"
-		#for s in steps:
-			#print s
-		#print steps
-		#print "##############################"
-		#self.assertEqual(steps, expected_steps)
+	def test_solve3(self):
+		solver = Solver(Eqn('3*x + x**2 = 3 + x**2'))
+		expected_steps = 	[	'x**2 + 3*x=x**2 + 3: solve',
+								'x**2 + 3*x=x**2 + 3: simp1',
+								'-x**2 + x**2 + 3*x - 3=-x**2 + x**2 - 3 + 3: simp4',
+								'3*x - 3=-x**2 + x**2 - 3 + 3: simp2',
+								'3*x - 3=0: simp2',
+								'3*x - 3 + 3=3: simp3',
+								'3*x=3: simp2',
+								'x=1: simp8',
+								'x=1: win2'
+							]
+		steps = solver.solve()
+		self.assertEqual(steps, expected_steps)
 
 	#def test_solve4(self):
 		#solver = Solver(Eqn('(x**2*(x+1)*(x+3))/((x+1)*(x+3)) + 3*x = 3 + x**2'))
@@ -116,6 +107,14 @@ class SampleCasesTest(unittest.TestCase):
 								#'x=(3)/(3): simp8',
 								#'x=(3)/(3): win2'
 							#]
+		#print "##############################"
+		#for s in expected_steps:
+			#print s
+		#print "------------------------------"
+		#for s in steps:
+			#print s
+		#print steps
+		#print "##############################"
 		#steps = solver.solve()
 		#self.assertEqual(steps, expected_steps)
 		#self.assertEqual(str(solver.eqn), 'x=(3)/(3)')

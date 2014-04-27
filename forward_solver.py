@@ -285,7 +285,7 @@ class RuleHelper:
 	@staticmethod
 	def subtractPoly(poly, to_subtract):
 		""" subtract one polynomial from the other without simplification"""
-		return sp.sympify(str(poly) + str(-1*to_subtract), evaluate=False)
+		return sp.sympify(str(poly) + '+' + str(-1*to_subtract), evaluate=False) # TODO: zeroes are automatically removed, how fix this?
 	@staticmethod
 	def moveConstRHSNonConstLHS(eqn):
 		""" subtract all lhs constant terms and rhs nonconstant terms from both sides """
@@ -444,7 +444,7 @@ HEUR1 =	PolyRule(lambda p:  RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb
 				'heur1'
 				)
 
-HEUR2 =	PolyRule(lambda p: RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb) == 2 and RuleHelper.completeSquare(p)[1]
+HEUR2 =	PolyRule(lambda p: RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb) == 2 and p.is_Add and RuleHelper.completeSquare(p)[1]
 				,lambda p : RuleHelper.completeSquare(p)[0]
 				,""" if a 2nd degree polynomial occurs anywhere, then factor it by completing the square """,
 				'heur2'
@@ -501,7 +501,9 @@ class Solver:
 	def solve(self):
 		"""solve the equation given, return steps to the solution"""
 		self.working_mem.steps.append(str(self.eqn) + ': ' + self.solve.__name__)
+		print '------------------------------'
 		while not self.checkWinCond():
+			print self.working_mem.steps[-1]
 			triggered_rules = self.getTriggeredRules()
 			if len(triggered_rules) == 0 : # stuck, there's no more todo
 				break
