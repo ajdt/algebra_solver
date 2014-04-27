@@ -48,7 +48,7 @@ class Eqn:
 		new_eqn.left  = self.left.copy()
 		new_eqn.right = self.right.copy()
 		return new_eqn
-	def degree(self): return max([sp.degree(self.left, gens=x_symb), sp.degree(self.right, gens=x_symb)])
+	def degree(self): return max([RuleHelper.degree(self.left), RuleHelper.degree(self.right)])
 
 	@staticmethod # TODO: unnecessary!
 	def strToPolyTree(string):
@@ -339,7 +339,7 @@ class RuleHelper:
 			return (std_poly, False)
 
 	@staticmethod
-	def isFactored(poly):return all([sp.degree(p, gens=x_symb) < 2 for p in poly.args ])
+	def isFactored(poly):return all([RuleHelper.degree(p) < 2 for p in poly.args ])
 
 	@staticmethod
 	def numerator(poly): return poly.as_numer_denom()[0]
@@ -360,7 +360,15 @@ class RuleHelper:
 		""" return true if polynomial is or has rational polynomials """
 		return any([RuleHelper.denominator(p) != 1 for p in poly.args]) or RuleHelper.denominator(poly) != 1
 	@staticmethod
-	def isStdpoly(poly): return sp.Poly(poly, x_symb).is_monomial  or ( poly.is_Add and all( [ sp.Poly(p,x_symb).is_monomial for p in poly.args]) )
+	def isStdpoly(poly): return (poly.is_polynomial() and sp.Poly(poly, x_symb).is_monomial)  or (poly.is_Add and all( [sp.Poly(p,x_symb).is_monomial for p in poly.args if p.is_polynomial()] ) )
+
+	@staticmethod
+	def degree(poly):
+		if not poly.is_polynomial():
+			numer, denom = poly.as_numer_denom()
+			return max([RuleHelper.degree(numer), RuleHelper.degree(denom)]) # TODO: not sure what to do about this yet
+		else:
+			return sp.degree(poly, gens=x_symb)
 
 
 ############################## RULES ##############################	
@@ -405,7 +413,7 @@ SIMP7 =	EqnRule(	lambda eq, wm : not eq.left.is_polynomial() and eq.right.is_zer
 					""" if lhs is a rational polynomial, and rhs is zero, solve for numerator """,
 					'simp7'
 					)
-SIMP8 =	EqnRule(	lambda eq, wm : eq.right.is_Number and eq.left.is_Mul and sp.degree(eq.left, gens=x_symb) == 1 and eq.left.coeff(x_symb) != 1 , 
+SIMP8 =	EqnRule(	lambda eq, wm : eq.right.is_Number and eq.left.is_Mul and RuleHelper.degree(eq.left) == 1 and eq.left.coeff(x_symb) != 1 , 
 					lambda eq,wm : RuleHelper.simp8Helper(eq),
 					""" if equation has form ax = b, divide by a """,
 					'simp8'
@@ -438,26 +446,26 @@ MULT5 =	PolyRule(lambda p: p.is_Mul and p.is_polynomial() and len([q for q in p.
 					'mult5'
 					)
 
-HEUR1 =	PolyRule(lambda p:  RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb) == 2 and p.factor(x_symb).is_Mul # TODO: look for is_factorable() method
+HEUR1 =	PolyRule(lambda p:  RuleHelper.isStdpoly(p) and RuleHelper.degree(p) == 2 and p.factor(x_symb).is_Mul # TODO: look for is_factorable() method
 				,lambda p : RuleHelper.factor(p)[0]
 				,""" if a 2nd degree polynomial occurs anywhere, then attempt to factor it """,
 				'heur1'
 				)
 
-HEUR2 =	PolyRule(lambda p: RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb) == 2 and p.is_Add and RuleHelper.completeSquare(p)[1]
+HEUR2 =	PolyRule(lambda p: RuleHelper.isStdpoly(p) and RuleHelper.degree(p) == 2 and p.is_Add and RuleHelper.completeSquare(p)[1]
 				,lambda p : RuleHelper.completeSquare(p)[0]
 				,""" if a 2nd degree polynomial occurs anywhere, then factor it by completing the square """,
 				'heur2'
 				)
 
-HEUR3 =	PolyRule(lambda p: sp.degree(p, gens=x_symb) == 3 and RuleHelper.isStdpoly(p) and RuleHelper.factor(p)[1]
+HEUR3 =	PolyRule(lambda p: RuleHelper.degree(p) == 3 and RuleHelper.isStdpoly(p) and RuleHelper.factor(p)[1]
 				,lambda p : RuleHelper.factor(p)[0]
 				,""" if a 3rd degree polynomial occurs anywhere, then attempt to factor it """,
 				'heur3'
 				)
 
 ## TODO: see if this rule can be written with other fraction rules
-HEUR4 =	PolyRule(lambda p:  RuleHelper.isStdpoly(p) and sp.degree(p, gens=x_symb) == 2 and p.coeff(x_symb)==0 and sp.Poly(p).coeff_monomial(x_symb**0) < 0	 
+HEUR4 =	PolyRule(lambda p:  RuleHelper.isStdpoly(p) and RuleHelper.degree(p) == 2 and p.coeff(x_symb)==0 and sp.Poly(p).coeff_monomial(x_symb**0) < 0	 
 				,lambda p : RuleHelper.heur4Helper(p)[0]
 				,""" if a polynomial of the form ax**2 -b occurs anywhere, then factor it as (x + sqrt(a/b)) (x - sqrt(a/b)) """,
 				'heur4'
@@ -480,7 +488,7 @@ class Solver:
 	def win2(self):
 		""" win condition: ax = b problem is solved """
 		right, left = self.eqn.right, self.eqn.left
-		return sp.degree(left,gens=x_symb) == 1 and right.is_Number and left.coeff(x_symb) == 1 and sp.Poly(left).coeff_monomial(x_symb**0) == 0
+		return RuleHelper.degree(left) == 1 and right.is_Number and left.coeff(x_symb) == 1 and sp.Poly(left).coeff_monomial(x_symb**0) == 0
 	def win3(self):
 		""" win condition: lhs is completely factored, rhs is zero """
 		right, left = self.eqn.right, self.eqn.left
@@ -588,5 +596,10 @@ class Solver:
 #soln_gen = SuperSolver('3*x**2/(x+1) = 0')
 #for soln in soln_gen.allSolns():
 #	print soln
+
+# TODO:
+# eventually use to avoid simp2 issue:
+# f2 = frac.raw_new(n+3*x, d)
+# frac = sp.polys.fields.FracElement.raw_new(n,d)  
 
 print 'puppies'
