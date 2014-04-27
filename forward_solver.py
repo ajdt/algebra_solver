@@ -55,39 +55,35 @@ class Eqn:
 		return  sp.sympify(string, evaluate=False)
 
 	## TODO: change to generate rand string!
-	#@staticmethod
-	#def genRandTree():
-		## TODO: rewrite to generate rand string, that is then parsed!
-		#node_type = random.sample(Eqn.node_list,1)[0]
-		#if node_type == Eqn.ADD:
-			#num_terms = Eqn.rand.randint(2,3)
-			#terms = [Eqn.genRandTree() for i in range(num_terms)]
-			#return SumPoly(terms)
-		#elif node_type == Eqn.MUL:
-			#num_terms = Eqn.rand.randint(2,2)
-			#terms = [Eqn.genRandTree() for i in range(num_terms)]
-			#return ProdPoly(terms)
-		#elif node_type == Eqn.FRAK:
-			#num = Eqn.genRandTree()
-			#denom = Eqn.genRandTree()
-			#return RatPoly(num,denom)
-		#elif node_type == Eqn.STD:
-			#degree = random.sample(Eqn.std_list, 1)[0]
-			#coeff = [random.randint(0,20) for i in range(4)]
-			#coeff[degree] = random.randint(1,20)
-			## ensure the coeff of higher degree monomials is zero
-			#for i in range(degree+1, len(coeff)):
-				#coeff[i] = 0
-			#d,c,b,a = coeff # coeffs are listed in ascending order
-			#return StdPoly(a*x_symb**3 + b*x_symb**2 + c*x_symb + d, x_symb)
-		#return StdPoly.one()
+	@staticmethod
+	def genRandTree():
+		# TODO: rewrite to generate rand string, that is then parsed!
+		node_type = random.sample(Eqn.node_list,1)[0]
+		if node_type == Eqn.ADD:
+			num_terms = Eqn.rand.randint(2,3)
+			return sp.add.Add.fromiter([Eqn.genRandTree() for i in range(num_terms)])
+		elif node_type == Eqn.MUL:
+			num_terms = Eqn.rand.randint(2,2)
+			return sp.mul.Mul.fromiter([Eqn.genRandTree() for i in range(num_terms)])
+		elif node_type == Eqn.FRAK:
+			return Eqn.genRandTree() /  Eqn.genRandTree()
+		elif node_type == Eqn.STD:
+			degree = random.sample(Eqn.std_list, 1)[0]
+			coeff = [random.randint(0,20) for i in range(4)]
+			coeff[degree] = random.randint(1,20)
+			# ensure the coeff of higher degree monomials is zero
+			for i in range(degree+1, len(coeff)):
+				coeff[i] = 0
+			d,c,b,a = coeff # coeffs are listed in ascending order
+			return a*x_symb**3 + b*x_symb**2 + c*x_symb + d
+		return sp.sympify(1)
 
-	#@staticmethod
-	#def genRandEqn():
-		#eqn = Eqn('x = 3')
-		#eqn.right = Eqn.genRandTree()
-		#eqn.left = Eqn.genRandTree()
-		#return eqn
+	@staticmethod
+	def genRandEqn():
+		eqn = Eqn('x = 3')
+		eqn.right = Eqn.genRandTree()
+		eqn.left = Eqn.genRandTree()
+		return eqn
 
 class WorkingMem:
 	SET_RHS_ZERO = 'set rhs zero'
