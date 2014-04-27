@@ -338,9 +338,7 @@ class RuleHelper:
 			return (std_poly, False)
 
 	@staticmethod
-	def isFactored(poly):
-		all([sp.degree(p, gens=x_symb) < 2 for p in poly.args ])
-	@staticmethod
+	def isFactored(poly):return all([sp.degree(p, gens=x_symb) < 2 for p in poly.args ])
 
 	@staticmethod
 	def numerator(poly): return poly.as_numer_denom()[0]
@@ -481,12 +479,12 @@ class Solver:
 	def win2(self):
 		""" win condition: ax = b problem is solved """
 		right, left = self.eqn.right, self.eqn.left
-		return sp.degree(left,gens=x_symb) == 1 and right.is_Number and left.coeff(x_symb) == 1 and left.coeff(x_symb**0) == 0
+		return sp.degree(left,gens=x_symb) == 1 and right.is_Number and left.coeff(x_symb) == 1 and sp.Poly(left).coeff_monomial(x_symb**0) == 0
 	def win3(self):
 		""" win condition: lhs is completely factored, rhs is zero """
 		right, left = self.eqn.right, self.eqn.left
 		# TODO: revisit this rule, it's gotten complex
-		return ( self.eqn.degree() >= 2 and RuleHelper.isFactored(left) and right.is_zero and not left.is_Add and not left.is_polynomial) # not a rational polynomial
+		return ( self.eqn.degree() >= 2 and RuleHelper.isFactored(left) and right.is_zero and not left.is_Add and left.is_polynomial()) # not a rational polynomial
 
 	############################### checking and solving ##############################
 	### list of rules and precedences they take

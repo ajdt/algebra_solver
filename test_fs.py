@@ -32,28 +32,28 @@ import pdb
 		## now add the common terms, and test for equality
 		#result = SumPoly([self.const, StdPoly(3*x_symb)])
 		#self.assertTrue(sum_poly.sumCommonTerms() == result)
-#class SolverTest(unittest.TestCase):
-	#def test_win1(self):
-		#solver = Solver(Eqn('3=1'))
-		#self.assertTrue(solver.win1())
+class SolverTest(unittest.TestCase):
+	def test_win1(self):
+		solver = Solver(Eqn('3=1'))
+		self.assertTrue(solver.win1())
 
-		## set the two sides equal
-		#solver.eqn = Eqn('3=3')
-		#self.assertFalse(solver.win1())
+		# set the two sides equal
+		solver.eqn = Eqn('3=3')
+		self.assertFalse(solver.win1())
 
-		## set non-constant terms
-		#solver.eqn = Eqn('5*x**2=3*(x)*(5*x**2)')
-		#self.assertFalse(solver.win1())
-	#def test_win2(self):
-		#solver = Solver(Eqn('x = 1'))
-		#self.assertTrue(solver.win2())
-	#def test_win3(self):
-		#solver = Solver(Eqn('(2+x)*(2+x)=0'))
-		#self.assertTrue(solver.win3())
+		# set non-constant terms
+		solver.eqn = Eqn('5*x**2=3*(x)*(5*x**2)')
+		self.assertFalse(solver.win1())
+	def test_win2(self):
+		solver = Solver(Eqn('x = 1'))
+		self.assertTrue(solver.win2())
+	def test_win3(self):
+		solver = Solver(Eqn('(2+x)*(2+x)=0'))
+		self.assertTrue(solver.win3())
 
-		## set to a higher degree poly, should be false
-		#solver.eqn = Eqn('5*x**2=0')
-		#self.assertFalse(solver.win3())
+		# set to a higher degree poly, should be false
+		solver.eqn = Eqn('5*x**2=0')
+		self.assertFalse(solver.win3())
 
 #class SampleCasesTest(unittest.TestCase):
 	#def test_solve1(self):
@@ -279,11 +279,11 @@ class SolverRuleTest(unittest.TestCase):
 		HEUR4.applyAction(self.solver.eqn, self.solver.working_mem)
 		self.assertEqual(str(self.solver.eqn.left), '(x - 5)*(x + 5)')
 
-#class RuleHelperTest(unittest.TestCase):
-	#def test_computeLCM(self):
-		#sp1, sp2 = StdPoly(x_symb + 3), StdPoly(x_symb + 2)
-		#self.assertEqual( ProdPoly( RuleHelper.computeLCM([sp1, sp2]) ), ProdPoly([sp1, sp2]))
-		#self.assertEqual(RuleHelper.computeLCM([sp1, sp1.copy()]), [sp1])
+class RuleHelperTest(unittest.TestCase):
+	def test_computeLCM(self):
+		sp1, sp2 = x_symb + 3, x_symb + 2
+		self.assertEqual( RuleHelper.computeLCM([sp1, sp2]), sp1*sp2)
+		self.assertEqual(RuleHelper.computeLCM([sp1, sp1.copy()]), sp1)
 
 #pdb.set_trace()
 
