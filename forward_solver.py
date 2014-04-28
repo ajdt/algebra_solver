@@ -528,7 +528,10 @@ class RuleHelper:
 		poly = (std_poly - c + d).factor()
 		if isinstance(poly, sp.Pow): # factoring was successful
 			factor = StdPoly(poly.args[0])
-			return (SumPoly([ProdPoly([factor, factor.copy()]), StdPoly(c - d, x_symb)]), True)
+			if c - d == 0:
+				return (ProdPoly([factor, factor.copy()]), True) # TODO: look for sympy is_factorable method?
+			else:
+				return (SumPoly([ProdPoly([factor, factor.copy()]), StdPoly(c - d, x_symb)]), True)
 		else:
 			return (std_poly, False)
 
@@ -830,9 +833,13 @@ class SuperSolver():
 
 	def allSolns(self):
 		solutions = []
-		solvers = [Solver(self.eqn)]
-		#pdb.set_trace()
-		while len(solvers) > 0:
+		solve = Solver(self.eqn)
+		solve.working_mem.steps.append(str(self.eqn) + ': solve' )
+		solvers = [solve]
+		# limit the number of tries we make
+		attempts, MAX_ATTEMPTS = 0, 5
+		MAX_STEPS = 10
+		while len(solvers) > 0 and attempts < MAX_ATTEMPTS:
 			# take the top solver
 			soln = solvers.pop()
 			for s in soln.working_mem.steps:
@@ -841,6 +848,10 @@ class SuperSolver():
 			# if finished solving, add it's solution
 			if soln.checkWinCond():
 				solutions.append(soln.working_mem.steps)
+				attempts += 1
+				continue
+			if len(soln.working_mem.steps) > MAX_STEPS:
+				attempts += 1
 				continue
 			# ... otherwise generate a solver for each triggered rule and apply the rule
 			triggered_rules = soln.getTriggeredRules()
@@ -872,13 +883,18 @@ class SuperSolver():
 # causes infinite loop: 3*x**2/(x+1) = 0
 
 # issues: zero not returning as a constant term
-#solver = Solver(Eqn('3*x**2/(x+1) = 0'))
-#pdb.set_trace()
+solver = Solver(Eqn('3*x**2/(x+1) = 0'))
 #applied = MULT5.checkCondition(solver.eqn, solver.working_mem)
 #MULT5.applyAction(solver.eqn, solver.working_mem)
 
-#print 'hot dog'
-#soln_gen = SuperSolver('3*x**2/(x+1) = 0')
-#for soln in soln_gen.allSolns():
-#	print soln
+def pprintSoln(soln):
+	print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
+	for step in soln:
+		print step
+	print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
+
+print 'hot dog'
+soln_gen = SuperSolver('3*x**2/(x+1) = 0')
+for soln in soln_gen.allSolns():
+	pprintSoln(soln)
 
