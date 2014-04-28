@@ -100,7 +100,10 @@ class SumPoly(CorePoly):
 	############################## terms and factors ##############################
 	# TODO: implement all of these
 	def __add__(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
-		return SumPoly(self.subpoly + other.subpoly).sumCommonTerms()
+		if self.__class == other.__class__:
+			return SumPoly(self.subpoly + other.subpoly).sumCommonTerms()
+		else:
+			self.addition(other)
 	def isConstantTerm(self): return self.degree() == 0
 	def getNonConstTerms(self): return mergeLists([ p.getNonConstTerms() for p in self.subpoly if isinstance(p, StdPoly)])
 	def getConstTerms(self): return mergeLists([ p.getConstTerms() for p in self.subpoly if isinstance(p, StdPoly)])
@@ -587,12 +590,12 @@ class RuleHelper:
 
 	@staticmethod
 	def mult4Helper(sum_poly):
-		lcm = Solver.computeLCM( [ i.denom for i in sum_poly.getFractions() ])
+		lcm = RuleHelper.computeLCM( [ i.denom for i in sum_poly.getFractions() ])
 		ls = []
 		# multiply all fractions to get a common denominator
 		for poly in sum_poly.subpoly:
 			if isinstance(poly, RatPoly): # compute the correct multiplier to get common denominator
-				multiplier = simplifyPolyTerms( Solver.removeFactorsFrom(poly.denom, lcm), StdPoly.one(), ProdPoly )
+				multiplier = simplifyPolyTerms( RuleHelper.removeFactorsFrom(poly.denom, lcm), StdPoly.one(), ProdPoly )
 				mult_frac = RatPoly(multiplier, multiplier.copy())
 				ls.append(poly.mult(mult_frac))
 			else:
@@ -837,8 +840,8 @@ class SuperSolver():
 		solve.working_mem.steps.append(str(self.eqn) + ': solve' )
 		solvers = [solve]
 		# limit the number of tries we make
-		attempts, MAX_ATTEMPTS = 0, 5
-		MAX_STEPS = 10
+		attempts, MAX_ATTEMPTS = 0, 15
+		MAX_STEPS = 20
 		while len(solvers) > 0 and attempts < MAX_ATTEMPTS:
 			# take the top solver
 			soln = solvers.pop()
@@ -854,7 +857,7 @@ class SuperSolver():
 				attempts += 1
 				continue
 			# ... otherwise generate a solver for each triggered rule and apply the rule
-			triggered_rules = soln.getTriggeredRules()
+			triggered_rules = list(reversed(soln.getTriggeredRules()))
 			if len(triggered_rules) == 0: # deadend, no solution down this path
 				continue
 			for rule in triggered_rules:
@@ -863,7 +866,8 @@ class SuperSolver():
 					self.steps_tried.add((str(new_solver.eqn), rule.__name__)) # remember what you've tried to do
 					rule.applyAction(new_solver.eqn, new_solver.working_mem)
 					new_solver.working_mem.addStep(new_solver.eqn, rule)
-					solvers.append(new_solver)
+					#solvers.append(new_solver)
+					solvers.insert(0,new_solver) # trying to queue processing instead of list
 		return solutions
 
 # Notes:
@@ -883,9 +887,21 @@ class SuperSolver():
 # causes infinite loop: 3*x**2/(x+1) = 0
 
 # issues: zero not returning as a constant term
-solver = Solver(Eqn('3*x**2/(x+1) = 0'))
+solver = Solver(Eqn('7*x + 1=15*x**2 + 10*x + 16'))
+SIMP4.applyAction(solver.eqn, solver.working_mem)
+if SIMP2.checkCondition(solver.eqn, solver.working_mem):
+	SIMP2.applyAction(solver.eqn, solver.working_mem)
+if SIMP2.checkCondition(solver.eqn, solver.working_mem):
+	SIMP2.applyAction(solver.eqn, solver.working_mem)
+print solver.eqn
 #applied = MULT5.checkCondition(solver.eqn, solver.working_mem)
 #MULT5.applyAction(solver.eqn, solver.working_mem)
+
+# successful all soln applications:
+# '3*x**2/(x+1) = 0'
+# '7*x + 1=15*x**2 + 10*x + 16' # doesn't find a solution as expected. Need better 
+# heuristics to give up fruitless search
+# '10=20*x + 18'
 
 def pprintSoln(soln):
 	print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
@@ -894,7 +910,7 @@ def pprintSoln(soln):
 	print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
 
 print 'hot dog'
-soln_gen = SuperSolver('3*x**2/(x+1) = 0')
+soln_gen = SuperSolver('(x-1)/(x**2 - 2*x-3) + (x+2)/(x**2-9) = (2*x+5)/(x**2 + 4*x +3)')
 for soln in soln_gen.allSolns():
 	pprintSoln(soln)
 
