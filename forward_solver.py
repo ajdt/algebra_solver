@@ -100,10 +100,10 @@ class SumPoly(CorePoly):
 	############################## terms and factors ##############################
 	# TODO: implement all of these
 	def __add__(self, other): # TODO: may need to fix this, for when we want to add 3(x+2)(x-3) + (x +2)(x-3)
-		if self.__class == other.__class__:
+		if self.__class__ == other.__class__:
 			return SumPoly(self.subpoly + other.subpoly).sumCommonTerms()
 		else:
-			self.addition(other)
+			return self.addition(other)
 	def isConstantTerm(self): return self.degree() == 0
 	def getNonConstTerms(self): return mergeLists([ p.getNonConstTerms() for p in self.subpoly if isinstance(p, StdPoly)])
 	def getConstTerms(self): return mergeLists([ p.getConstTerms() for p in self.subpoly if isinstance(p, StdPoly)])
@@ -122,7 +122,7 @@ class SumPoly(CorePoly):
 		condensed = [] # common terms after being added together
 		while len(ls) > 0:
 			# in each pass, grab all subpoly that have sameTerms and add them
-			result = reduce(lambda x,y: x + y, filter(lambda x: ls[0].isSameTerm(x), ls) )
+			result = reduce(lambda x,y: x + y, filter(lambda x: ls[0].isSameTerm(x), ls[1:]), ls[0])
 			condensed.append(result)
 			ls = filter(lambda x: not ls[0].isSameTerm(x), ls)
 
@@ -840,8 +840,9 @@ class SuperSolver():
 		solve.working_mem.steps.append(str(self.eqn) + ': solve' )
 		solvers = [solve]
 		# limit the number of tries we make
-		attempts, MAX_ATTEMPTS = 0, 15
+		attempts, MAX_ATTEMPTS = 0, 5
 		MAX_STEPS = 20
+		MAX_LEN = 3*len(str(self.eqn))
 		while len(solvers) > 0 and attempts < MAX_ATTEMPTS:
 			# take the top solver
 			soln = solvers.pop()
@@ -856,18 +857,23 @@ class SuperSolver():
 			if len(soln.working_mem.steps) > MAX_STEPS:
 				attempts += 1
 				continue
+			if len(str(soln.eqn)) > MAX_LEN: # another heuristic
+				continue
 			# ... otherwise generate a solver for each triggered rule and apply the rule
 			triggered_rules = list(reversed(soln.getTriggeredRules()))
 			if len(triggered_rules) == 0: # deadend, no solution down this path
 				continue
-			for rule in triggered_rules:
+			for (idx, rule) in enumerate(triggered_rules):
 				new_solver = soln.copy()
 				if (str(new_solver.eqn), rule.__name__) not in self.steps_tried:
 					self.steps_tried.add((str(new_solver.eqn), rule.__name__)) # remember what you've tried to do
 					rule.applyAction(new_solver.eqn, new_solver.working_mem)
 					new_solver.working_mem.addStep(new_solver.eqn, rule)
 					#solvers.append(new_solver)
-					solvers.insert(0,new_solver) # trying to queue processing instead of list
+					if idx == len(triggered_rules)-1: # an attempt to get more varied solutions
+						solvers.append(new_solver)
+					else:
+						solvers.insert(0,new_solver) # trying to queue processing instead of list
 		return solutions
 
 # Notes:
@@ -913,4 +919,6 @@ print 'hot dog'
 soln_gen = SuperSolver('(x-1)/(x**2 - 2*x-3) + (x+2)/(x**2-9) = (2*x+5)/(x**2 + 4*x +3)')
 for soln in soln_gen.allSolns():
 	pprintSoln(soln)
-
+#s1 = Eqn.strToPolyTree('(x - 1) * (x + 3) + (x + 2) * (x + 1)')
+#s2 = Eqn.strToPolyTree('(-2*x - 5) * (x - 3)')
+#s3 = s1 + s2
