@@ -117,6 +117,8 @@ class EqnRule(object):
 	"""A rule that applies at the level of a single equation, and uses working mem"""
 	def __init__(self, cond, action, desc="", name=""):
 		self._cond, self._action, self._desc, self.__name__ = cond, action, desc, name
+	def __str__(self):
+		return self.__name__
 	def checkCondition(self, eqn, working_mem):
 		""" @return: true if condition applies"""
 		return self._cond(eqn, working_mem)
@@ -225,7 +227,7 @@ class RuleHelper:
 		"""
 		# TODO: remove boolean return value
 		if not std_poly.is_Add:
-			raise TypeError
+			return (std_poly, False)
 
 		factored_poly = std_poly.factor()
 		if isinstance(factored_poly, sp.Mul): # factoring was successful
@@ -442,7 +444,7 @@ MULT5 =	PolyRule(lambda p: p.is_Mul and p.is_polynomial() and len([q for q in p.
 					'mult5'
 					)
 
-HEUR1 =	PolyRule(lambda p:  RuleHelper.isStdpoly(p) and RuleHelper.degree(p) == 2 and p.factor(x_symb).is_Mul # TODO: look for is_factorable() method
+HEUR1 =	PolyRule(lambda p:  p.is_Add and RuleHelper.isStdpoly(p) and RuleHelper.degree(p) == 2 and p.factor(x_symb).is_Mul # TODO: look for is_factorable() method
 				,lambda p : RuleHelper.factor(p)[0]
 				,""" if a 2nd degree polynomial occurs anywhere, then attempt to factor it """,
 				'heur1'
@@ -482,7 +484,7 @@ class Solver:
 		right, left = self.eqn.right, self.eqn.left
 		return (left.is_Number and right.is_Number and left != right)
 	def win2(self):
-		""" win condition: ax = b problem is solved """
+		""" win condition: x = b problem is solved """
 		right, left = self.eqn.right, self.eqn.left
 		return RuleHelper.degree(left) == 1 and right.is_Number and left.coeff(x_symb) == 1 and sp.Poly(left).coeff_monomial(x_symb**0) == 0
 	def win3(self):
@@ -490,11 +492,17 @@ class Solver:
 		right, left = self.eqn.right, self.eqn.left
 		# TODO: revisit this rule, it's gotten complex
 		return ( self.eqn.degree() >= 2 and RuleHelper.isFactored(left) and right.is_zero and not left.is_Add and left.is_polynomial()) # not a rational polynomial
+	def win4(self):
+		""" eqn of the form ax**2 = b is solved"""
+		left, right = self.eqn.left, self.eqn.right
+		return (right.is_Number and left.is_Mul and RuleHelper.isStdpoly(left) and left.coeff(x_symb**2) != 0 
+				and  left.coeff(x_symb) == 0 and sp.Poly(left).coeff_monomial(x_symb**0) == 0)
+		# TODO: add simp rule to divide and take square root!
 
 	############################### checking and solving ##############################
 	### list of rules and precedences they take
 	SIMP_RULES		= [SIMP6,SIMP7, SIMP8, SIMP0, SIMP1, SIMP2, SIMP3, SIMP4, SIMP5, SIMP9 ]
-	WIN_RULES		= [win1, win2, win3]
+	WIN_RULES		= [win1, win2, win3, win4]
 	MULT_RULES		= [MULT1, MULT2, MULT4, MULT5]
 	MISC_RULES		= []
 	HEURISTICS		= [HEUR1, HEUR2, HEUR3, HEUR4]
@@ -534,37 +542,43 @@ class Solver:
 
 	def selectRule(self, triggered_rules): return min(triggered_rules, key=self.rule_ordering)
 
-#class SuperSolver():
-	#def __init__(self, eqn_str):
-		#self.eqn = Eqn(eqn_str)
-		#self.steps_tried = set()
+class SuperSolver():
+	def __init__(self, eqn_str):
+		self.eqn = Eqn(eqn_str)
+		self.steps_tried = set()
 
-	#def allSolns(self):
-		#solutions = []
-		#solvers = [Solver(self.eqn)]
-		##pdb.set_trace()
-		#while len(solvers) > 0:
-			## take the top solver
-			#soln = solvers.pop()
-			#for s in soln.working_mem.steps:
-				#print s
-			#print "##############################"
-			## if finished solving, add it's solution
-			#if soln.checkWinCond():
-				#solutions.append(soln.working_mem.steps)
-				#continue
-			## ... otherwise generate a solver for each triggered rule and apply the rule
-			#triggered_rules = soln.getTriggeredRules()
-			#if len(triggered_rules) == 0: # deadend, no solution down this path
-				#continue
-			#for rule in triggered_rules:
-				#new_solver = soln.copy()
-				#if (str(new_solver.eqn), rule.__name__) not in self.steps_tried:
-					#self.steps_tried.add((str(new_solver.eqn), rule.__name__)) # remember what you've tried to do
-					#rule.applyAction(new_solver.eqn, new_solver.working_mem)
-					#new_solver.working_mem.addStep(new_solver.eqn, rule)
-					#solvers.append(new_solver)
-		#return solutions
+	def allSolns(self):
+		solutions = []
+		solvers = [Solver(self.eqn)]
+		#pdb.set_trace()
+		attempt_count, ATTEMPT_LIMIT = 0, 10
+		while len(solvers) > 0:
+			# take the top solver
+			if attempt_count > ATTEMPT_LIMIT: # REMOVE: for now want bounded number of attempts 
+				break
+			soln = solvers.pop()
+			for s in soln.working_mem.steps:
+				print s
+			print "##############################"
+			# if finished solving, add it's solution
+			if soln.checkWinCond()  : 
+				solutions.append(soln.working_mem.steps)
+				attempt_count+= 1
+				continue
+			if len(soln.working_mem.steps) > 10:# if we've been working for a long time, just stop
+				continue
+			# ... otherwise generate a solver for each triggered rule and apply the rule
+			triggered_rules = soln.getTriggeredRules()
+			if len(triggered_rules) == 0: # deadend, no solution down this path
+				continue
+			for rule in triggered_rules:
+				new_solver = soln.copy()
+				if (str(new_solver.eqn), rule.__name__) not in self.steps_tried:
+					self.steps_tried.add((str(new_solver.eqn), rule.__name__)) # remember what you've tried to do
+					rule.applyAction(new_solver.eqn, new_solver.working_mem)
+					new_solver.working_mem.addStep(new_solver.eqn, rule)
+					solvers.append(new_solver)
+		return solutions
 
 # Notes:
 #	all/any for reducing a list of booleans
@@ -598,4 +612,24 @@ class Solver:
 # f2 = frac.raw_new(n+3*x, d)
 # frac = sp.polys.fields.FracElement.raw_new(n,d)  
 
-print 'puppies'
+def prettyPrintSoln(soln):
+	print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+	for step in soln:
+		print step
+	print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+
+print 'hot dog'
+#soln_gen = SuperSolver('3*x**2/(x+1) = 0')
+#all_solutions = soln_gen.allSolns()
+#for soln in all_solutions:
+	#prettyPrintSoln(soln)
+#if len(all_solutions) == 0:
+	#print "no solutions were found"
+#print 'puppies'
+
+solver = Solver(Eqn('3*x**2/(x+1) = 0'))
+
+apply_rules = [MULT2, MULT1]
+for rule in apply_rules:
+	if rule.checkCondition(solver.eqn, solver.working_mem):
+		rule.applyAction(solver.eqn, solver.working_mem)
