@@ -834,6 +834,19 @@ class SuperSolver():
 		self.eqn = Eqn(eqn_str)
 		self.steps_tried = set()
 
+	def certify(self, steps): 
+		""" ensure given sequence of steps is a valid way to solve eqn.
+		@param steps: a list of Rules in order of application
+		"""
+		solver = Solver(self.eqn)
+		for rule in steps:
+			if not rule.checkCondition(solver.eqn, solver.working_mem):
+				return False
+			else:
+				rule.applyAction(solver.eqn, solver.working_mem)
+		# after applying all rules, check if a win condition applies
+		return solver.checkWinCond()
+
 	def allSolns(self):
 		solutions = []
 		solve = Solver(self.eqn)
@@ -876,6 +889,7 @@ class SuperSolver():
 						solvers.insert(0,new_solver) # trying to queue processing instead of list
 		return solutions
 
+
 # Notes:
 #	all/any for reducing a list of booleans
 
@@ -893,32 +907,3 @@ class SuperSolver():
 # causes infinite loop: 3*x**2/(x+1) = 0
 
 # issues: zero not returning as a constant term
-solver = Solver(Eqn('7*x + 1=15*x**2 + 10*x + 16'))
-SIMP4.applyAction(solver.eqn, solver.working_mem)
-if SIMP2.checkCondition(solver.eqn, solver.working_mem):
-	SIMP2.applyAction(solver.eqn, solver.working_mem)
-if SIMP2.checkCondition(solver.eqn, solver.working_mem):
-	SIMP2.applyAction(solver.eqn, solver.working_mem)
-print solver.eqn
-#applied = MULT5.checkCondition(solver.eqn, solver.working_mem)
-#MULT5.applyAction(solver.eqn, solver.working_mem)
-
-# successful all soln applications:
-# '3*x**2/(x+1) = 0'
-# '7*x + 1=15*x**2 + 10*x + 16' # doesn't find a solution as expected. Need better 
-# heuristics to give up fruitless search
-# '10=20*x + 18'
-
-def pprintSoln(soln):
-	print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
-	for step in soln:
-		print step
-	print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
-
-print 'hot dog'
-soln_gen = SuperSolver('(x-1)/(x**2 - 2*x-3) + (x+2)/(x**2-9) = (2*x+5)/(x**2 + 4*x +3)')
-for soln in soln_gen.allSolns():
-	pprintSoln(soln)
-#s1 = Eqn.strToPolyTree('(x - 1) * (x + 3) + (x + 2) * (x + 1)')
-#s2 = Eqn.strToPolyTree('(-2*x - 5) * (x - 3)')
-#s3 = s1 + s2
