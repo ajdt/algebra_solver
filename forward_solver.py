@@ -301,6 +301,8 @@ class StdPoly(sp.Poly, CorePoly):
 	def isSameTerm(self, other): 
 		if not self.__class__ == other.__class__:
 			return False
+		if self.is_zero and other.is_zero:
+			return True
 		my_coeffs, other_coeffs = list(reversed(self.all_coeffs())), list(reversed(other.all_coeffs()))
 		same_terms = lambda x, y: x is not None and y is not None and x != 0 and y != 0
 		return  any(map(same_terms, my_coeffs, other_coeffs))
@@ -850,6 +852,7 @@ class SuperSolver():
 	def allSolns(self):
 		solutions = []
 		solve = Solver(self.eqn)
+		solve.working_mem = WorkingMem(steps_in_latex=True)
 		solve.working_mem.steps.append(str(self.eqn) + ': solve' )
 		solvers = [solve]
 		# limit the number of tries we make
@@ -859,9 +862,9 @@ class SuperSolver():
 		while len(solvers) > 0 and attempts < MAX_ATTEMPTS:
 			# take the top solver
 			soln = solvers.pop()
-			for s in soln.working_mem.steps:
-				print s
-			print "##############################"
+			#for s in soln.working_mem.steps:
+				#print s
+			#print "##############################"
 			# if finished solving, add it's solution
 			if soln.checkWinCond():
 				solutions.append(soln.working_mem.steps)
@@ -887,6 +890,8 @@ class SuperSolver():
 						solvers.append(new_solver)
 					else:
 						solvers.insert(0,new_solver) # trying to queue processing instead of list
+					#if str(new_solver.eqn) == '6*x + 14 + -14 + 0 + 14=0 + -14 + 0 + 14':
+						#pdb.set_trace()
 		return solutions
 
 
