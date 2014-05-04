@@ -49,17 +49,36 @@ NumChild {make_node(Num, Depth, ID, Side) : num_terms(Num) }  NumChild :- _poly_
 :- 0{ _monomial(monom(_, _, 1),id( _, _), parent(_, _), _) } 0.
 %:- { make_node(A,B,C) } 0 .
 
-% TODO: REMOVE. These rules exist just so I don't have to modify my python visualization tool
-_poly_tree(Op, Num, D, IDNum, PD, PIDNum, Side) :- _poly_tree(Op,Num,id(D, IDNum),parent( PD, PIDNum), Side).
-_monomial(C,B,E,D,IDNum,PD,PIDNum,Side) :- _monomial(monom(C,B,E),id(D,IDNum),parent(PD,PIDNum),Side).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SOLVER %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % REMOVE THIS. Just used for testing --project option
 optype(add) :- _poly_tree(add,_,id( _, _),parent( _, _), _).
 %optype(div) :- _poly_tree(div,_, _, _, _, _, _).
 optype(mul) :- _poly_tree(mul,_,id( _, _), parent(_, _), _).
 optype(blah) :- _monomial(monom(2,x,0),id(1,_),parent(0,_),left), _monomial(monom(2,x,0),id(1,_),parent(0,_),right), _poly_tree(add,_,id(0,_),parent(0,0),left) .
 
+
+% TODO: REMOVE. These rules exist just so I don't have to modify my python visualization tool
+_poly_tree(Op, Num, D, IDNum, PD, PIDNum, Side) :- _poly_tree(Op,Num,id(D, IDNum),parent( PD, PIDNum), Side).
+_monomial(C,B,E,D,IDNum,PD,PIDNum,Side) :- _monomial(monom(C,B,E),id(D,IDNum),parent(PD,PIDNum),Side).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SOLVER %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% add round number to generated polytree
+_poly_tree(Op,Num,id(D, IDNum),parent( PD, PIDNum), Side, 0) :- _poly_tree(Op,Num,id(D, IDNum),parent( PD, PIDNum), Side).
+_monomial(monom(C,B,E),id(D,IDNum),parent(PD,PIDNum),Side, 0) :- _monomial(monom(C,B,E),id(D,IDNum),parent(PD,PIDNum),Side).
+
+#const max_steps = 10. % max number of steps to try in solving an equation. REMOVE LATER.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% RULES AND TRACES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+remove(_monomial(monom(0,X,Y), ID2, PID, S, R)) :- _monomial(X, ID1, PID, S, R), _monomial(monom(0,X,Y), ID2, PID, S, R). % remove zeroes
+
+% remove poly_tree that has only one child
+% TODO: remove the poly_tree
+%_monomial(Params, ID, PID, Side, R+1) :- _polytree(Op NumC, ID, PID, Side, R),  [ _monomial(_, _, ID, Side, R) ] 1, _monomial(Params, MonID, ID, Side, R).
+
+% rules for removing a monomial
+
+% moving on to the next round: 
+_monomial(Params, ID, PID, Side, R+1) :- _monomial(Params, ID, PID, Side, R), R < max_steps, not remove( _monomial(Params, ID, PID, Side, R) ).
+_poly_tree(Op, NumC, ID, PID, Side, R+1) :- _poly_tree(Op, NumC, ID, PID, Side, R), R < max_steps, not remove( _poly_tree(Op, NumC, ID, PID, Side, R) ).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% win conditions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
